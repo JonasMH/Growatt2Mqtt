@@ -1,0 +1,18 @@
+﻿namespace GrowattShine2Mqtt.Telegrams;
+
+public class GrowattTelegramHeader
+{
+    public byte ProtocolVersion { get; set; }
+    public short MessageTypeRaw { get; set; }
+    public short MessageLength { get; set; }
+    public GrowattTelegramType? MessageType => Enum.IsDefined(typeof(GrowattTelegramType), (int)MessageTypeRaw) ? (GrowattTelegramType)MessageTypeRaw : null;
+
+    public static GrowattTelegramHeader Parse(ArraySegment<byte> bytes)
+    {
+        return new ByteDecoder<GrowattTelegramHeader>(new GrowattTelegramHeader { }, bytes)
+            .ReadByte(x => x.ProtocolVersion, 3)
+            .ReadInt16(x => x.MessageLength, 4)
+            .ReadInt16(x => x.MessageTypeRaw, 6)
+            .Result;
+    }
+}
