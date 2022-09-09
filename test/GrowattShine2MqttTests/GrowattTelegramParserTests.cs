@@ -53,9 +53,9 @@ public class GrowattTelegramParserTests
         Assert.IsType<GrowattSPHData4Telegram>(result);
         var dataTelegram = (result as GrowattSPHData4Telegram)!;
         Assert.Equal(6, dataTelegram.Pvstatus);
-        Assert.Equal(40, dataTelegram.SOC);
-        Assert.Equal(6, dataTelegram.Pv2current);
-        Assert.Equal(1572, dataTelegram.Vbat);
+        Assert.Equal(10, dataTelegram.SOC);
+        Assert.Equal(0, dataTelegram.Pv2current);
+        Assert.Equal(1540, dataTelegram.Vbat);
     }
 
     [Fact]
