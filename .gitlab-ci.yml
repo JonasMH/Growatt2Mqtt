@@ -28,6 +28,6 @@ archive image:
     - apk update && apk add --no-cache docker-cli openrc git
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - docker build --pull -f ./src/KnxToMqttNet/Dockerfile -t $CI_REGISTRY/$CI_PROJECT_PATH:latest .
+    - docker build --pull -f $(find ./src/**/Dockerfile -print -quit) -t $CI_REGISTRY/$CI_PROJECT_PATH:latest .
     - docker push $CI_REGISTRY/$CI_PROJECT_PATH:latest
     - if [ $(git diff HEAD HEAD~1 --name-only | grep VERSION) ]; then docker tag $CI_REGISTRY/$CI_PROJECT_PATH:latest $CI_REGISTRY/$CI_PROJECT_PATH:$(cat VERSION); docker push $CI_REGISTRY/$CI_PROJECT_PATH:$(cat VERSION); fi
