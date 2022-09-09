@@ -1,22 +1,52 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using GrowattShine2Mqtt.Telegrams;
 
 namespace GrowattShine2Mqtt;
+
+public interface IGrowattSocket
+{
+    int Available { get; }
+    Task SendAsync(ArraySegment<byte> buffer);
+    Task<int> ReceiveAsync(ArraySegment<byte> buffer);
+}
+
+public class GrowattSocket : IGrowattSocket
+{
+    private readonly Socket _socket;
+
+    public GrowattSocket(Socket socket)
+    {
+        _socket = socket;
+    }
+
+    public int Available => _socket.Available;
+
+    public async Task SendAsync(ArraySegment<byte> buffer)
+    {
+        await _socket.SendAsync(buffer, SocketFlags.None);
+    }
+
+    public async Task<int> ReceiveAsync(ArraySegment<byte> buffer)
+    {
+        return await _socket.ReceiveAsync(buffer, SocketFlags.None);
+    }
+}
 
 public class GrowattSocketHandler
 {
     private readonly ILogger<GrowattSocketHandler> _logger;
     private readonly IGrowattToMqttHandler _growattToMqttHandler;
-    private readonly GrowattTelegramParser _telegramParser;
-    private readonly GrowattMetrics _metrics;
-    private readonly Socket _socket;
+    private readonly IGrowattTelegramParser _telegramParser;
+    private readonly IGrowattMetrics _metrics;
+    private readonly IGrowattSocket _socket;
 
     public GrowattSocketHandler(
         ILogger<GrowattSocketHandler> logger,
         IGrowattToMqttHandler growattToMqttHandler,
-        GrowattTelegramParser growattTelegramParser,
-        GrowattMetrics metrics,
-        Socket socket)
+        IGrowattTelegramParser growattTelegramParser,
+        IGrowattMetrics metrics,
+        IGrowattSocket socket)
     {
         _logger = logger;
         _growattToMqttHandler = growattToMqttHandler;
@@ -25,6 +55,44 @@ public class GrowattSocketHandler
         _socket = socket;
     }
 
+    public async Task HandleMessageAsync(ArraySegment<byte> buffer)
+    {
+        var telegram = _telegramParser.ParseMessage(buffer);
+
+        _logger.LogInformation("Received {packageTypeRaaw}({packetType}) packet of size {size} bytes v{protocolVersion}", telegram?.Header.MessageTypeRaw, telegram?.Header.MessageType, buffer.Count, telegram?.Header.ProtocolVersion);
+        _logger.LogDebug("{packet}", buffer.ToHex());
+
+        if (telegram == null)
+        {
+            return;
+        }
+
+        _metrics.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+
+        switch (telegram)
+        {
+            case GrowattSPHPingTelegram pingTelegram:
+                _logger.LogInformation("We seem to have received a ping, echoing...");
+                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+                await _socket.SendAsync(buffer);
+                break;
+            case GrowattSPHData3Telegram data3Telegram:
+                _logger.LogInformation("We seem to have received a data telegram from {date}, ACKing... \n{telegram}", data3Telegram.Date, data3Telegram);
+                var data3Response = new GrowattSPHData3TelegramAck(telegram.Header);
+                var data3Bytes = data3Response.ToBytes();
+                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", data3Bytes.Length);
+                await _socket.SendAsync(data3Bytes);
+                break;
+            case GrowattSPHData4Telegram data4Telegram:
+                _logger.LogInformation("We seem to have received a data telegram from {date}, ACKing... \n{telegram}", data4Telegram.Date, data4Telegram);
+                var data4Response = new GrowattSPHData4TelegramAck(telegram.Header);
+                var data4Bytes = data4Response.ToBytes();
+                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", data4Bytes.Length);
+                await _socket.SendAsync(data4Bytes);
+                _growattToMqttHandler.NewDataTelegram(data4Telegram);
+                break;
+        }
+    }
 
     public async Task RunAsync()
     {
@@ -39,36 +107,9 @@ public class GrowattSocketHandler
 
             try
             {
-                var amountReceived = await _socket.ReceiveAsync(buffer, SocketFlags.None);
+                var amountReceived = await _socket.ReceiveAsync(buffer);
+                await HandleMessageAsync(new ArraySegment<byte>(buffer, 0, amountReceived));
 
-                _logger.LogInformation("Received packet of size {size}: {body}", amountReceived, BitConverter.ToString(buffer, 0, amountReceived));
-
-                var telegram = _telegramParser.HandleMessage(new ArraySegment<byte>(buffer, 0, amountReceived));
-
-                if (telegram == null)
-                {
-                    continue;
-                }
-
-                _metrics.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", amountReceived);
-
-                switch (telegram)
-                {
-                    case GrowattSPHPingTelegram pingTelegram:
-                        _logger.LogInformation("We seem to have received a ping, echoing...");
-                        await _socket.SendAsync(new ArraySegment<byte>(buffer, 0, amountReceived), SocketFlags.None);
-                        break;
-                    case GrowattSPHData4Telegram dataTelegram:
-                        _logger.LogInformation("We seem to have received a data telegram, ACKing...");
-                        var response = new byte[]
-                        {
-                                0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x01, 0x04, 0x00
-                        };
-                        _metrics.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", response.Length);
-                        await _socket.SendAsync(response, SocketFlags.None);
-                        _growattToMqttHandler.NewDataTelegram(dataTelegram);
-                        break;
-                }
             }
             catch (Exception e)
             {

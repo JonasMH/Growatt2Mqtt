@@ -6,13 +6,13 @@ public class GrowattServerListener : IHostedService
 {
     private readonly ILogger<GrowattServerListener> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly GrowattMetrics _metrics;
+    private readonly IGrowattMetrics _metrics;
     private List<GrowattSocketHandler> _sockets = new List<GrowattSocketHandler>();
 
     public GrowattServerListener(
-    ILogger<GrowattServerListener> logger,
-    IServiceProvider serviceProvider,
-    GrowattMetrics metrics)
+        ILogger<GrowattServerListener> logger,
+        IServiceProvider serviceProvider,
+        IGrowattMetrics metrics)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
@@ -34,7 +34,7 @@ public class GrowattServerListener : IHostedService
                     var socket = await tcpListener.AcceptSocketAsync();
                     _logger.LogInformation("Got connection from {endpoint}", socket.RemoteEndPoint);
                     _metrics?.NewConnection();
-                    var growattSocket = ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, socket);
+                    var growattSocket = ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, (IGrowattSocket)(new GrowattSocket(socket)));
                     _sockets.Add(growattSocket);
                     var _ = growattSocket.RunAsync();
                 }

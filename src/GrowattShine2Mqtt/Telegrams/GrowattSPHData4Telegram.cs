@@ -1,4 +1,6 @@
-﻿namespace GrowattShine2Mqtt.Telegrams;
+﻿using NodaTime;
+
+namespace GrowattShine2Mqtt.Telegrams;
 
 public class GrowattSPHData4Telegram : IGrowattTelegram
 {
@@ -11,7 +13,7 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
 
     public string Datalogserial { get; set; }
     public string Pvserial { get; set; }
-    public int Date { get; set; }
+    public Instant? Date { get; set; }
     public int Recortype1 { get; set; }
     public int Recortype2 { get; set; }
     public short Pvstatus { get; set; }
@@ -52,8 +54,8 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
     public short Realoppercent { get; set; }
     public int Opfullwatt { get; set; }
     public short Deratingmode { get; set; }
-    public int Eacharge_today { get; set; }
-    public int Eacharge_total { get; set; }
+    public int EachargeToday { get; set; }
+    public int EachargeTotal { get; set; }
     public short Batterytype { get; set; }
     public short Uwsysworkmode { get; set; }
     public short Systemfaultword0 { get; set; }
@@ -81,25 +83,37 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
     public int Plocaloadt { get; set; }
     public int Plocaloadtot { get; set; }
     public int Ipm { get; set; }
-    public int Battemp { get; set; }
+    public short Battemp { get; set; }
     public short Spdspstatus { get; set; }
     public short Spbusvolt { get; set; }
     public int Etouser_tod { get; set; }
     public int Etouser_tot { get; set; }
     public int Etogrid_tod { get; set; }
     public int Etogrid_tot { get; set; }
-    public int Edischarge1_tod { get; set; }
-    public int Edischarge1_tot { get; set; }
+    public int Edischarge1Today { get; set; }
+    public int Edischarge1Total { get; set; }
     public int Eharge1_tod { get; set; }
     public int Eharge1_tot { get; set; }
     public int Elocalload_tod { get; set; }
     public int Elocalload_tot { get; set; }
+    public short OutputPriority { get; private set; }
+
+    public override string ToString()
+    {
+        return $"\tPv1voltage: {Pv1voltage}\n" +
+            $"\tPv1current: {Pv1current}\n" +
+            $"\tPv1watt: {Pv1watt}\n" +
+            $"\tPv2voltage: {Pv2voltage}\n" +
+            $"\tPv2current: {Pv2current}\n" +
+            $"\tPv2watt: {Pv2watt}\n";
+    }
 
     public static GrowattSPHData4Telegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {
         return new ByteDecoder<GrowattSPHData4Telegram>(new GrowattSPHData4Telegram(header), bytes)
             .ReadString(x => x.Datalogserial, 16 / 2, 10)
             .ReadString(x => x.Pvserial, 76 / 2, 10)
+            .ReadGrowattDateTime(x => x.Date, 136 / 2)
             .ReadInt16(x => x.Pvstatus, 158 / 2)
             .ReadInt32(x => x.Pvpowerin, 162 / 2)
             .ReadInt16(x => x.Pv1voltage, 170 / 2)
@@ -133,8 +147,9 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
             .ReadInt16(x => x.Pvboosttemp, 538 / 2)
             .ReadInt16(x => x.Bat_dsp, 546 / 2)
             .ReadInt16(x => x.Pbusvolt, 550 / 2)
-            .ReadInt32(x => x.Eacharge_today, 606 / 2)
-            .ReadInt32(x => x.Eacharge_total, 614 / 2)
+            .ReadInt32(x => x.EachargeToday, 606 / 2)
+            .ReadInt32(x => x.EachargeTotal, 614 / 2)
+            .ReadInt16(x => x.OutputPriority, 630 / 2)
             .ReadInt16(x => x.Batterytype, 634 / 2)
             .ReadInt16(x => x.Uwsysworkmode, 666 / 2)
             .ReadInt16(x => x.Systemfaultword0, 670 / 2)
@@ -150,23 +165,68 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
             .ReadInt16(x => x.Vbat, 718 / 2)
             .ReadInt16(x => x.SOC, 722 / 2)
             .ReadInt32(x => x.Pactouserr, 726 / 2)
+            .ReadInt32(x => x.Pactousers, 734 / 2)
+            .ReadInt32(x => x.Pactousert, 742 / 2)
             .ReadInt32(x => x.Pactousertot, 750 / 2)
             .ReadInt32(x => x.Pactogridr, 758 / 2)
             .ReadInt32(x => x.Pactogridtot, 782 / 2)
             .ReadInt32(x => x.Plocaloadr, 790 / 2)
+            .ReadInt32(x => x.Plocaloads, 798 / 2)
+            .ReadInt32(x => x.Plocaloadt, 806 / 2)
             .ReadInt32(x => x.Plocaloadtot, 814 / 2)
+            .ReadInt16(x => x.Battemp, 826 / 2)
             .ReadInt16(x => x.Spdspstatus, 830 / 2)
             .ReadInt16(x => x.Spbusvolt, 834 / 2)
             .ReadInt32(x => x.Etouser_tod, 842 / 2)
             .ReadInt32(x => x.Etouser_tot, 850 / 2)
             .ReadInt32(x => x.Etogrid_tod, 858 / 2)
             .ReadInt32(x => x.Etogrid_tot, 866 / 2)
-            .ReadInt32(x => x.Edischarge1_tod, 874 / 2)
-            .ReadInt32(x => x.Edischarge1_tot, 882 / 2)
+            .ReadInt32(x => x.Edischarge1Today, 874 / 2)
+            .ReadInt32(x => x.Edischarge1Total, 882 / 2)
             .ReadInt32(x => x.Eharge1_tod, 890 / 2)
             .ReadInt32(x => x.Eharge1_tot, 898 / 2)
             .ReadInt32(x => x.Elocalload_tod, 906 / 2)
             .ReadInt32(x => x.Elocalload_tot, 914 / 2)
             .Result;
+    }
+}
+public class GrowattSPHData4TelegramAck : IGrowattTelegram
+{
+    public GrowattSPHData4TelegramAck(GrowattTelegramHeader header)
+    {
+        Header = header;
+    }
+
+    public GrowattTelegramHeader Header { get; set; }
+
+    public byte[] ToBytes()
+    {
+        // In : 00 25 00 06 02 41 01 03 0d 22 2c 402040467734257761...
+        // Out: 00 25 00 06 00 03 01 03 47 F7 D9
+        //      ?? ?? ?? ?? ll ll tt tt data
+        // ll ll = tt + data length
+        // tt tt = message type
+
+        var buffer = new List<byte>();
+
+        buffer.AddRange(Header.Original[0..4]); // ??
+        buffer.AddRange(new byte[] { 0x00, 0x00 }); // Make space for length
+        buffer.AddRange(Header.Original[6..8]); // Add message type
+        buffer.Add(0x47); // Add magic
+        buffer.AddRange(new byte[] { 0x00, 0x00 }); // Make space for crc
+
+
+        var result = buffer.ToArray();
+
+        // Write length
+        Array.Copy(BitConverter.GetBytes((short)(buffer.Count - 8)).Reverse().ToArray(), 0, result, 4, 2);
+
+        // Write CRC
+        var crc = new Crc16Modbus();
+        var crcResult = BitConverter.GetBytes(crc.ComputeChecksum(result[0..^2])).Reverse().ToArray();
+
+        Array.Copy(crcResult, 0, result, result.Length - 2, 2);
+
+        return result;
     }
 }

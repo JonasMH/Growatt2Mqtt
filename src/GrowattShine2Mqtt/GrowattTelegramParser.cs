@@ -3,7 +3,12 @@ using GrowattShine2Mqtt.Telegrams;
 
 namespace GrowattShine2Mqtt;
 
-public class GrowattTelegramParser
+public interface IGrowattTelegramParser
+{
+    IGrowattTelegram? ParseMessage(ArraySegment<byte> buffer);
+}
+
+public class GrowattTelegramParser : IGrowattTelegramParser
 {
     private readonly ILogger<GrowattTelegramParser> _logger;
 
@@ -30,7 +35,7 @@ public class GrowattTelegramParser
         return unscrambled;
     }
 
-    public IGrowattTelegram? HandleMessage(ArraySegment<byte> buffer)
+    public IGrowattTelegram? ParseMessage(ArraySegment<byte> buffer)
     {
         var decrypted = Decrypt(buffer);
 
@@ -42,6 +47,7 @@ public class GrowattTelegramParser
             case GrowattTelegramType.PING:
                 return GrowattSPHPingTelegram.Parse(decrypted, parsedHeader);
             case GrowattTelegramType.DATA3:
+                return GrowattSPHData3Telegram.Parse(decrypted, parsedHeader);
             case GrowattTelegramType.DATA4:
                 return GrowattSPHData4Telegram.Parse(decrypted, parsedHeader);
         }

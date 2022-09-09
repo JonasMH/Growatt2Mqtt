@@ -2,7 +2,15 @@
 
 namespace GrowattShine2Mqtt;
 
-public class GrowattMetrics
+public interface IGrowattMetrics
+{
+    void ActiveConnections(int activeConnections);
+    void MessageReceived(string messageType, int size);
+    void MessageSent(string messageType, int size);
+    void NewConnection();
+}
+
+public class GrowattMetrics : IGrowattMetrics
 {
     private readonly MetricFactory _metricsFactory;
 

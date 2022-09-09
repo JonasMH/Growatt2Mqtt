@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using NodaTime;
 
 namespace GrowattShine2Mqtt;
 
@@ -19,7 +20,7 @@ public class ByteDecoder<T>
 
     public ByteDecoder<T> ReadString(Expression<Func<T, string>> memberLamda, int pos, int length)
     {
-        var reversed = _buffer.Array[pos..].Take(length).ToArray();
+        var reversed = _buffer.Array[(pos + _buffer.Offset)..].Take(length).ToArray();
         SetPropertyValue(_instance, memberLamda, Encoding.UTF8.GetString(reversed));
         return this;
     }
@@ -27,21 +28,38 @@ public class ByteDecoder<T>
     public ByteDecoder<T> ReadInt16(Expression<Func<T, short>> memberLamda, int pos)
     {
         var length = 2;
-        var reversed = _buffer.Array[pos..].Take(length).Reverse().ToArray();
+        var reversed = _buffer.Array[(pos + _buffer.Offset)..].Take(length).Reverse().ToArray();
         SetPropertyValue(_instance, memberLamda, BitConverter.ToInt16(reversed));
         return this;
     }
+
     public ByteDecoder<T> ReadByte(Expression<Func<T, byte>> memberLamda, int pos)
     {
-        SetPropertyValue(_instance, memberLamda, _buffer.Array[pos]);
+        SetPropertyValue(_instance, memberLamda, _buffer.Array[(pos + _buffer.Offset)]);
         return this;
     }
 
     public ByteDecoder<T> ReadInt32(Expression<Func<T, int>> memberLamda, int pos)
     {
         var length = 4;
-        var reversed = _buffer.Array[pos..].Take(length).Reverse().ToArray();
+        var reversed = _buffer.Array[(pos + _buffer.Offset)..].Take(length).Reverse().ToArray();
         SetPropertyValue(_instance, memberLamda, BitConverter.ToInt32(reversed));
+        return this;
+    }
+
+    public ByteDecoder<T> ReadGrowattDateTime(Expression<Func<T, Instant?>> memberLamda, int pos)
+    {
+        var year = _buffer[pos] + 2000;
+        var month = _buffer[pos + 1];
+        var day = _buffer[pos + 2];
+        var hour = _buffer[pos + 3];
+        var minute = _buffer[pos + 4];
+        var second = _buffer[pos + 5];
+
+        var instant = Instant.FromUtc(year, month, day, hour, minute, second);
+
+        SetPropertyValue(_instance, memberLamda, instant);
+
         return this;
     }
 

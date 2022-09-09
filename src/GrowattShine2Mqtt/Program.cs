@@ -20,7 +20,7 @@ builder.Host.UseSerilog((options, loggerConf) =>
 var services = builder.Services;
 
 services.AddSingleton<IGrowattTopicHelper, GrowattTopicHelper>();
-services.AddSingleton<GrowattTelegramParser>();
+services.AddSingleton<IGrowattTelegramParser, GrowattTelegramParser>();
 services.AddHostedService<GrowattServerListener>();
 services.AddMqttConnection(options =>
 {
@@ -45,7 +45,7 @@ services.AddSingleton<MetricFactory>(x =>
 	return factory;
 });
 
-services.AddSingleton<GrowattMetrics>();
+services.AddSingleton<IGrowattMetrics, GrowattMetrics>();
 
 services.AddSingleton<GrowattToMqttHandler>();
 services.AddSingleton<IGrowattToMqttHandler>(x => x.GetRequiredService<GrowattToMqttHandler>());
