@@ -19,6 +19,7 @@ builder.Host.UseSerilog((options, loggerConf) =>
 
 var services = builder.Services;
 
+services.AddHealthChecks();
 services.AddSingleton<IGrowattTopicHelper, GrowattTopicHelper>();
 services.AddSingleton<IGrowattTelegramParser, GrowattTelegramParser>();
 services.AddHostedService<GrowattServerListener>();
@@ -53,6 +54,13 @@ services.AddHostedService(x => x.GetRequiredService<GrowattToMqttHandler>());
 
 var app = builder.Build();
 
+app.UseRouting();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapHealthChecks("/health");
+    endpoints.MapMetrics("/metrics", endpoints.ServiceProvider.GetRequiredService<CollectorRegistry>());
+});
 
 
 app.Run();

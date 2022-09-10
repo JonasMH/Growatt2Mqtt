@@ -56,6 +56,11 @@ public class ByteDecoder<T>
         var minute = _buffer[pos + 4];
         var second = _buffer[pos + 5];
 
+        if(month == 0)
+        {
+            return this;
+        }
+
         var instant = Instant.FromUtc(year, month, day, hour, minute, second);
 
         SetPropertyValue(_instance, memberLamda, instant);
