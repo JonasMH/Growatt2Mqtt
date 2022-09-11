@@ -57,19 +57,10 @@ public class GrowattStatusPayload
     public float Edischarge1_total { get; set; }
     public float Elocalload_tod { get; set; }
     public float Elocalload_tot { get; set; }
-    public float Plocaloadr { get; set; }
-    public float Plocaloads { get; set; }
-    public float Plocaloadt { get; set; }
     public float Plocaloadtot { get; set; }
     public float Etouser_tod { get; internal set; }
     public float Etouser_tot { get; internal set; }
-    public float Pactouserr { get; internal set; }
-    public float Pactousers { get; internal set; }
-    public float Pactousert { get; internal set; }
     public float Eactotal { get; internal set; }
-    public float Pactogridr { get; internal set; }
-    public float Pactogrids { get; internal set; }
-    public float Pactogridt { get; internal set; }
     public string OutputPriority { get; internal set; }
 }
 
@@ -158,25 +149,16 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             // Local load
             Elocalload_tod = data4Telegram.Elocalload_tod / 10f,
             Elocalload_tot = data4Telegram.Elocalload_tot / 10f,
-            Plocaloadr = data4Telegram.Plocaloadr / 10f,
-            Plocaloads = data4Telegram.Plocaloads / 10f,
-            Plocaloadt = data4Telegram.Plocaloadt / 10f,
             Plocaloadtot = data4Telegram.Plocaloadtot / 10f,
 
             // Import
             Etouser_tod = data4Telegram.Etouser_tod / 10f,
             Etouser_tot = data4Telegram.Etouser_tot / 10f,
-            Pactouserr = data4Telegram.Pactouserr / 10f,
-            Pactousers = data4Telegram.Pactousers / 10f,
-            Pactousert = data4Telegram.Pactousert / 10f,
             Pactousertot = data4Telegram.Pactousertot / 10f,
 
             // Export
             Eactoday = data4Telegram.Eactoday / 10f,
             Eactotal = data4Telegram.Eactotal / 10f,
-            Pactogridr = data4Telegram.Pactogridr / 10f,
-            Pactogrids = data4Telegram.Pactogrids / 10f,
-            Pactogridt = data4Telegram.Pactogridt / 10f,
             Pactogridtot = data4Telegram.Pactogridtot / 10f,
 
             OutputPriority = outputPriority,
@@ -202,42 +184,33 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         _logger.LogInformation("Wasn't able to find any discovery document for {dataLogger}", data4Telegram.Datalogserial);
 
         // Local Load
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Plocaloadr), "Local Load L1 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Plocaloads), "Local Load L2 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Plocaloadt), "Local Load L3 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Plocaloadtot), "Local Load Total Actual", "W", data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Plocaloadtot), "Local Load Actual", HomeAssistantUnits.POWER_WATT, data4Telegram, MqttDiscoveryStateClass.Measurement));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Elocalload_tod), "Local Load Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Elocalload_tot), "Local Load Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Elocalload_tot), "Local Load Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram, MqttDiscoveryStateClass.TotalIncreasing));
 
         // Grid import Load
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactouserr), "Grid Import L1 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactousers), "Grid Import L2 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactousert), "Grid Import L3 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactousertot), "Grid Import Total Actual", "W", data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactousertot), "Grid Import Actual", HomeAssistantUnits.POWER_WATT, data4Telegram, MqttDiscoveryStateClass.Measurement));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Etouser_tod), "Grid Import Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Etouser_tot), "Grid Import Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Etouser_tot), "Grid Import Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram, MqttDiscoveryStateClass.TotalIncreasing));
         
         // Grid export Load
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactogridr), "Grid Export L1 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactogrids), "Grid Export L2 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactogridt), "Grid Export L3 Actual", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactogridtot), "Grid Export Total Actual", "W", data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pactogridtot), "Grid Export Actual", HomeAssistantUnits.POWER_WATT, data4Telegram, MqttDiscoveryStateClass.Measurement));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Eactoday), "Grid Export Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Eactotal), "Grid Export Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Eactotal), "Grid Export Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram, MqttDiscoveryStateClass.TotalIncreasing));
 
         // Solar
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pvenergytoday), "Generated Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv1Voltage), "Loop 1 Voltage", "V", data4Telegram));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv1Current), "Loop 1 Currrent", "A", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv1Watt), "Loop 1 Watt", "W", data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv1Watt), "Loop 1 Watt", HomeAssistantUnits.POWER_WATT, data4Telegram));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv2Voltage), "Loop 2 Voltage", "V", data4Telegram));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv2Current), "Loop 2 Currrent", "A", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv2Watt), "Loop 2 Watt", "W", data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pv2Watt), "Loop 2 Watt", HomeAssistantUnits.POWER_WATT, data4Telegram));
 
         // Inverter
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pvtemperature), "Inverter Temperature", HomeAssistantUnits.TEMP_CELSIUS, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pvpowerin), "Inverter Input Watt", "W", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pvpowerout), "Inverter Output Watt", "W", data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pvpowerin), "Inverter Input Watt", HomeAssistantUnits.POWER_WATT, data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pvpowerout), "Inverter Output Watt", HomeAssistantUnits.POWER_WATT, data4Telegram));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.OutputPriority), "Inverter Output Priority", "", data4Telegram));
 
         // Grid Status
@@ -250,20 +223,20 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pvgridcurrent3), "Grid Current L3", HomeAssistantUnits.ELECTRICAL_CURRENT_AMPERE, data4Telegram));
 
         // Battery
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.StateOfCharge), "Battery State of Charge", HomeAssistantUnits.PERCENTAGE, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Vbat), "Battery Voltage", "V", data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.BatteryTemperature), "Battery Temperature", HomeAssistantUnits.TEMP_CELSIUS, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.P1charge1), "Battery Charge Actual", HomeAssistantUnits.POWER_WATT, data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.StateOfCharge), "Battery State of Charge", HomeAssistantUnits.PERCENTAGE, data4Telegram, MqttDiscoveryStateClass.Measurement));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Vbat), "Battery Voltage", "V", data4Telegram, MqttDiscoveryStateClass.Measurement));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.BatteryTemperature), "Battery Temperature", HomeAssistantUnits.TEMP_CELSIUS, data4Telegram, MqttDiscoveryStateClass.Measurement));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.P1charge1), "Battery Charge Actual", HomeAssistantUnits.POWER_WATT, data4Telegram, MqttDiscoveryStateClass.Measurement));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Eacharge_today), "Battery Charge Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Eacharge_total), "Battery Charge Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pdischarge1), "Batter Discharge Actual", HomeAssistantUnits.POWER_WATT, data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Eacharge_total), "Battery Charge Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram, MqttDiscoveryStateClass.TotalIncreasing));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Pdischarge1), "Batter Discharge Actual", HomeAssistantUnits.POWER_WATT, data4Telegram, MqttDiscoveryStateClass.Measurement));
         _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Edischarge1_tod), "Batter Discharge Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
-        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Edischarge1_total), "Batter Discharge Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram));
+        _dicoveryConfigs.Add(CreateDiscoveryDocument(nameof(GrowattStatusPayload.Edischarge1_total), "Batter Discharge Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram, MqttDiscoveryStateClass.TotalIncreasing));
 
         PublishConfigs();
     }
 
-    private MqttSensorDiscoveryConfig CreateDiscoveryDocument(string propertyName, string displayName, string? unit, GrowattSPHData4Telegram data4Telegram)
+    private MqttSensorDiscoveryConfig CreateDiscoveryDocument(string propertyName, string displayName, string? unit, GrowattSPHData4Telegram data4Telegram, MqttDiscoveryStateClass? stateClass = null)
     {
         return new MqttSensorDiscoveryConfig
         {
@@ -288,7 +261,8 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             },
             StateTopic = _topicHelper.GetDataPublishTopic(data4Telegram.Datalogserial),
             ValueTemplate = $"{{{{ value_json.{_jsonSerializerOptions.PropertyNamingPolicy.ConvertName(propertyName)}}}}}",
-            UnitOfMeasurement = unit
+            UnitOfMeasurement = unit,
+            StateClass = stateClass
         };
     }
 

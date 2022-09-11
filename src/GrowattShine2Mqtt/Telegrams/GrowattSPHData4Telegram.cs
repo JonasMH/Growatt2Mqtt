@@ -190,7 +190,7 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
             .Result;
     }
 }
-public class GrowattSPHData4TelegramAck : IGrowattTelegram
+public class GrowattSPHData4TelegramAck : IGrowattTelegram, ISerializeableGrowattTelegram
 {
     public GrowattSPHData4TelegramAck(GrowattTelegramHeader header)
     {
@@ -201,32 +201,12 @@ public class GrowattSPHData4TelegramAck : IGrowattTelegram
 
     public byte[] ToBytes()
     {
-        // In : 00 25 00 06 02 41 01 03 0d 22 2c 402040467734257761...
-        // Out: 00 25 00 06 00 03 01 03 47 F7 D9
-        //      ?? ?? ?? ?? ll ll tt tt data
-        // ll ll = tt + data length
-        // tt tt = message type
-
         var buffer = new List<byte>();
 
         buffer.AddRange(Header.Original[0..4]); // ??
         buffer.AddRange(new byte[] { 0x00, 0x00 }); // Make space for length
         buffer.AddRange(Header.Original[6..8]); // Add message type
-        buffer.Add(0x47); // Add magic
-        buffer.AddRange(new byte[] { 0x00, 0x00 }); // Make space for crc
-
-
-        var result = buffer.ToArray();
-
-        // Write length
-        Array.Copy(BitConverter.GetBytes((short)(buffer.Count - 8)).Reverse().ToArray(), 0, result, 4, 2);
-
-        // Write CRC
-        var crc = new Crc16Modbus();
-        var crcResult = BitConverter.GetBytes(crc.ComputeChecksum(result[0..^2])).Reverse().ToArray();
-
-        Array.Copy(crcResult, 0, result, result.Length - 2, 2);
-
-        return result;
+        buffer.Add(0x00); // Add magic
+        return buffer.ToArray();
     }
 }

@@ -6,5 +6,5 @@ public enum GrowattTelegramType
     DATA4 = 0x0104,
     PING = 0x0116,
     CONFIGURE = 0x0118,
-    IDENTITY = 0x0119
+    QUERY = 0x0119
 }

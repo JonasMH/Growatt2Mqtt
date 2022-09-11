@@ -47,6 +47,8 @@ services.AddSingleton<MetricFactory>(x =>
 });
 
 services.AddSingleton<IGrowattMetrics, GrowattMetrics>();
+services.AddSingleton<IGrowattTelegramEncrypter, GrowattTelegramEncrypter>();
+services.AddSingleton<NodaTime.IClock>(x => NodaTime.SystemClock.Instance);
 
 services.AddSingleton<GrowattToMqttHandler>();
 services.AddSingleton<IGrowattToMqttHandler>(x => x.GetRequiredService<GrowattToMqttHandler>());

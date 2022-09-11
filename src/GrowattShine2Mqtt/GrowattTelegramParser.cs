@@ -1,4 +1,5 @@
-﻿using System.Net.NetworkInformation;
+﻿using System;
+using System.Net.NetworkInformation;
 using GrowattShine2Mqtt.Telegrams;
 
 namespace GrowattShine2Mqtt;
@@ -6,17 +7,16 @@ namespace GrowattShine2Mqtt;
 public interface IGrowattTelegramParser
 {
     IGrowattTelegram? ParseMessage(ArraySegment<byte> buffer);
+    ArraySegment<byte> PackMessage(ISerializeableGrowattTelegram telegram);
 }
 
-public class GrowattTelegramParser : IGrowattTelegramParser
+public interface IGrowattTelegramEncrypter
 {
-    private readonly ILogger<GrowattTelegramParser> _logger;
+    byte[] Decrypt(ArraySegment<byte> buffer);
+}
 
-    public GrowattTelegramParser(ILogger<GrowattTelegramParser> logger)
-    {
-        _logger = logger;
-    }
-
+public class GrowattTelegramEncrypter : IGrowattTelegramEncrypter
+{
     public byte[] Decrypt(ArraySegment<byte> buffer)
     {
         var dataLength = buffer.Count;
@@ -34,10 +34,57 @@ public class GrowattTelegramParser : IGrowattTelegramParser
 
         return unscrambled;
     }
+}
+
+public class GrowattTelegramParser : IGrowattTelegramParser
+{
+    private readonly ILogger<GrowattTelegramParser> _logger;
+    private readonly IGrowattTelegramEncrypter _encrypter;
+
+    public GrowattTelegramParser(ILogger<GrowattTelegramParser> logger, IGrowattTelegramEncrypter encrypter)
+    {
+        _logger = logger;
+        _encrypter = encrypter;
+    }
+
+
+    public ArraySegment<byte> PackMessage(ISerializeableGrowattTelegram telegram)
+    {
+
+        // In : 00 25 00 06 02 41 01 03 0d 22 2c 402040467734257761...
+        // Out: 00 25 00 06 00 03 01 03 47 F7 D9
+        //      ?? ?? ?? ?? ll ll tt tt data crc crc
+        // ll ll = tt + data length
+        // tt tt = message type
+
+        var telegramBytes = telegram.ToBytes();
+        var buffer = new byte[telegramBytes.Length + 2];// Make space for crc
+
+
+        if(telegramBytes.Length > 8) // Has a body we need to encrypt
+        {
+            var encrypted = _encrypter.Decrypt(telegramBytes);
+            Array.Copy(encrypted, 0, buffer, 0, encrypted.Length);
+        } else
+        {
+            Array.Copy(telegramBytes, 0, buffer, 0, telegramBytes.Length);
+        }
+
+        // Write length
+        Array.Copy(BitConverter.GetBytes((short)(buffer.Length - 8)).Reverse().ToArray(), 0, buffer, 4, 2);
+
+        // Write CRC
+        var crc = new Crc16Modbus();
+        var crcResult = BitConverter.GetBytes(crc.ComputeChecksum(buffer[0..^2])).Reverse().ToArray();
+
+        Array.Copy(crcResult, 0, buffer, buffer.Length - 2, 2);
+
+        return buffer;
+    }
 
     public IGrowattTelegram? ParseMessage(ArraySegment<byte> buffer)
     {
-        var decrypted = Decrypt(buffer);
+        var decrypted = _encrypter.Decrypt(buffer);
 
         var header = buffer[0..8];
         var parsedHeader = GrowattTelegramHeader.Parse(header);
@@ -50,6 +97,8 @@ public class GrowattTelegramParser : IGrowattTelegramParser
                 return GrowattSPHData3Telegram.Parse(decrypted, parsedHeader);
             case GrowattTelegramType.DATA4:
                 return GrowattSPHData4Telegram.Parse(decrypted, parsedHeader);
+            case GrowattTelegramType.CONFIGURE:
+                return GrowattConfigureTelegram.Parse(decrypted, parsedHeader);
         }
 
         _logger.LogWarning("Failed to parse message of type {messageTypeRaw}", parsedHeader.MessageTypeRaw.ToHex());

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using GrowattShine2Mqtt.Telegrams;
+using NodaTime;
 
 namespace GrowattShine2Mqtt;
 
@@ -39,6 +40,7 @@ public class GrowattSocketHandler
     private readonly IGrowattToMqttHandler _growattToMqttHandler;
     private readonly IGrowattTelegramParser _telegramParser;
     private readonly IGrowattMetrics _metrics;
+    private readonly IClock _systemClock;
     private readonly IGrowattSocket _socket;
 
     public GrowattSocketHandler(
@@ -46,12 +48,14 @@ public class GrowattSocketHandler
         IGrowattToMqttHandler growattToMqttHandler,
         IGrowattTelegramParser growattTelegramParser,
         IGrowattMetrics metrics,
+        IClock systemClock,
         IGrowattSocket socket)
     {
         _logger = logger;
         _growattToMqttHandler = growattToMqttHandler;
         _telegramParser = growattTelegramParser;
         _metrics = metrics;
+        this._systemClock = systemClock;
         _socket = socket;
     }
 
@@ -78,20 +82,26 @@ public class GrowattSocketHandler
                 break;
             case GrowattSPHData3Telegram data3Telegram:
                 _logger.LogInformation("We seem to have received a data telegram from {date}, ACKing... \n{telegram}", data3Telegram.Date, data3Telegram);
-                var data3Response = new GrowattSPHData3TelegramAck(telegram.Header);
-                var data3Bytes = data3Response.ToBytes();
-                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", data3Bytes.Length);
-                await _socket.SendAsync(data3Bytes);
+                await SendTelegram(new GrowattSPHData3TelegramAck(telegram.Header));
+
+                await SendTelegram(new GrowattConfigureTelegram()
+                {
+                    LoggerId = data3Telegram.Datalogserial
+                }.CreateTimeCommand(_systemClock.GetCurrentInstant()));
                 break;
             case GrowattSPHData4Telegram data4Telegram:
                 _logger.LogInformation("We seem to have received a data telegram from {date}, ACKing... \n{telegram}", data4Telegram.Date, data4Telegram);
-                var data4Response = new GrowattSPHData4TelegramAck(telegram.Header);
-                var data4Bytes = data4Response.ToBytes();
-                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", data4Bytes.Length);
-                await _socket.SendAsync(data4Bytes);
+                await SendTelegram(new GrowattSPHData4TelegramAck(telegram.Header));
                 _growattToMqttHandler.NewDataTelegram(data4Telegram);
                 break;
         }
+    }
+
+    private async Task SendTelegram(ISerializeableGrowattTelegram telegram)
+    {
+        var data4Bytes = _telegramParser.PackMessage(telegram);
+        _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", data4Bytes.Count);
+        await _socket.SendAsync(data4Bytes);
     }
 
     public async Task RunAsync()

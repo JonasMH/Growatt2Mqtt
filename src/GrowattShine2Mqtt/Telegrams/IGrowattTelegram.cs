@@ -2,6 +2,13 @@
 
 public interface IGrowattTelegram
 {
-    public GrowattTelegramHeader Header { get; }
+    GrowattTelegramHeader Header { get; }
+
+}
+
+
+public interface ISerializeableGrowattTelegram : IGrowattTelegram
+{
+    byte[] ToBytes();
 }
 
