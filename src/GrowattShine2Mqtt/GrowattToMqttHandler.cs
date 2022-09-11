@@ -293,7 +293,7 @@ public class MqttSensorDiscoveryConfigBuilder
             },
             StateTopic = topicHelper.GetDataPublishTopic(data4Telegram.Datalogserial),
             ValueTemplate = $"{{{{ value_json.{topicHelper.GetPayloadPropertyName(propertyName)}}}}}",
-            UnitOfMeasurement = unit.Value,
+            UnitOfMeasurement = unit?.Value,
         };
     }
 
