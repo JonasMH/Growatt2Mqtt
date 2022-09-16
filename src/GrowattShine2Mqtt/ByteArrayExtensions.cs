@@ -16,6 +16,12 @@ public static class ByteArrayExtensions
         BitConverter.TryWriteBytes(buffer, input);
         return BitConverter.ToString(buffer).Replace("-", "");
     }
+    public static string ToHex(this ushort input)
+    {
+        var buffer = new byte[2];
+        BitConverter.TryWriteBytes(buffer, input);
+        return BitConverter.ToString(buffer).Replace("-", "");
+    }
 }
 
 public static class StringExtensions

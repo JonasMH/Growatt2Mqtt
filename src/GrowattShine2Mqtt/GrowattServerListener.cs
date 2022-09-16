@@ -2,12 +2,17 @@
 
 namespace GrowattShine2Mqtt;
 
-public class GrowattServerListener : IHostedService
+public interface IGrowattServerListener
+{
+    List<GrowattSocketHandler> Sockets { get; }
+}
+
+public class GrowattServerListener : IHostedService, IGrowattServerListener
 {
     private readonly ILogger<GrowattServerListener> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly IGrowattMetrics _metrics;
-    private List<GrowattSocketHandler> _sockets = new List<GrowattSocketHandler>();
+    public List<GrowattSocketHandler> Sockets { get; } = new List<GrowattSocketHandler>();
 
     public GrowattServerListener(
         ILogger<GrowattServerListener> logger,
@@ -35,7 +40,7 @@ public class GrowattServerListener : IHostedService
                     _logger.LogInformation("Got connection from {endpoint}", socket.RemoteEndPoint);
                     _metrics?.NewConnection();
                     var growattSocket = ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, (IGrowattSocket)(new GrowattSocket(socket)));
-                    _sockets.Add(growattSocket);
+                    Sockets.Add(growattSocket);
                     var _ = growattSocket.RunAsync();
                 }
                 catch (Exception e)

@@ -6,16 +6,17 @@ using NodaTime;
 
 namespace GrowattShine2Mqtt.Telegrams;
 
-public enum GrowattConfigureRegisters
+public enum GrowattDataloggerRegisters
 {
-    TIME = 0x001F,
     SERVER_ADDRESS = 0x0013,
+    TIME = 0x001F,
     REBOOT = 0x0020
 }
 
-public class GrowattConfigureTelegram : IGrowattTelegram, ISerializeableGrowattTelegram
+
+public class GrowattDataloggerCommandTelegram : IGrowattTelegram, ISerializeableGrowattTelegram
 {
-    public GrowattConfigureTelegram()
+    public GrowattDataloggerCommandTelegram()
     {
         Header = new GrowattTelegramHeader()
         {
@@ -29,16 +30,17 @@ public class GrowattConfigureTelegram : IGrowattTelegram, ISerializeableGrowattT
     public GrowattTelegramHeader Header { get; set; }
 
     public string LoggerId { get; set; }
-    public short Register { get; set; }
+    public ushort Register { get; set; }
     public byte[] Value { get; set; }
 
 
     public byte[] ToBytes()
     {
         // In : 00 01 00 06 00 37 01 18 0d 22 ..
-        //      ?? ?? ?? ?? ll ll tt tt data
+        //      ?? ?? ?? pp ll ll tt tt data
         // ll ll = tt + data length
         // tt tt = message type
+        // pp = protocol version
 
         var buffer = new List<byte>();
 
@@ -54,19 +56,19 @@ public class GrowattConfigureTelegram : IGrowattTelegram, ISerializeableGrowattT
         return buffer.ToArray();
     }
 
-    public static GrowattConfigureTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
+    public static GrowattDataloggerCommandTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {
-        return new ByteDecoder<GrowattConfigureTelegram>(new GrowattConfigureTelegram() { Header = header }, bytes)
+        return new ByteDecoder<GrowattDataloggerCommandTelegram>(new GrowattDataloggerCommandTelegram() { Header = header }, bytes)
             .Result;
     }
 }
 
-public static class GrowattConfigureTelegramExtensions
+public static class GrowattDataloggerCommandTelegramExtensions
 {
-    public static GrowattConfigureTelegram CreateTimeCommand(this GrowattConfigureTelegram telegram, Instant instant)
+    public static GrowattDataloggerCommandTelegram CreateTimeCommand(this GrowattDataloggerCommandTelegram telegram, LocalDateTime dateTime)
     {
-        telegram.Register = (short)GrowattConfigureRegisters.TIME;
-        telegram.Value = Encoding.UTF8.GetBytes(instant.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        telegram.Register = (ushort)GrowattDataloggerRegisters.TIME;
+        telegram.Value = Encoding.UTF8.GetBytes(dateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         return telegram;
     }
 }

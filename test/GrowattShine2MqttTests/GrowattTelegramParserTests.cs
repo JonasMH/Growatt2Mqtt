@@ -29,6 +29,19 @@ public class GrowattTelegramParserTests
     }
 
     [Fact]
+    public void InvalidCRC_ReturnsNull()
+    {
+        var input = _data3Example
+            .ParseHex();
+
+        input[^1]++;
+
+        var result = _sut.ParseMessage(input);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void Data4Telegram()
     {
         var input = _data4Example
@@ -53,5 +66,22 @@ public class GrowattTelegramParserTests
         var result = _sut.ParseMessage(input);
 
         Assert.IsType<GrowattSPHPingTelegram>(result);
+    }
+
+    [Fact]
+    public void CommandInverterTelegram()
+    {
+        // Change AC Output source to Batt priority
+        var input = "00010006002501060a252847233c4377415f7761747447726f7761747447726f7761747447726f766174748492"
+            .ParseHex();
+
+        var result = _sut.ParseMessage(input);
+
+        Assert.IsType<GrowattInverterCommandResponseTelegram>(result);
+
+        var telegram = result as GrowattInverterCommandResponseTelegram;
+        Assert.Equal("MWG0BH7030", telegram.Datalogserial);
+        Assert.Equal(0x0001, telegram.Register);
+        Assert.Equal(0x0000, telegram.Data);
     }
 }

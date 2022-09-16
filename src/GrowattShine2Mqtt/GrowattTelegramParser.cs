@@ -89,6 +89,15 @@ public class GrowattTelegramParser : IGrowattTelegramParser
         var header = buffer[0..8];
         var parsedHeader = GrowattTelegramHeader.Parse(header);
 
+        var crc = new Crc16Modbus();
+        var expectedCrc = BitConverter.GetBytes(crc.ComputeChecksum(buffer[0..^2])).Reverse().ToArray();
+
+        if (expectedCrc[0] != buffer[^2] || expectedCrc[1] != buffer[^1])
+        {
+            _logger.LogWarning("Skipping telegram due to CRC Check failed. Telegram {telgram}. Expected {expectedCrc} was {actualCrc}", buffer.ToHex(), expectedCrc.ToHex(), buffer[^2..].ToHex());
+            return null;
+        }
+
         switch (parsedHeader.MessageType)
         {
             case GrowattTelegramType.PING:
@@ -97,8 +106,12 @@ public class GrowattTelegramParser : IGrowattTelegramParser
                 return GrowattSPHData3Telegram.Parse(decrypted, parsedHeader);
             case GrowattTelegramType.DATA4:
                 return GrowattSPHData4Telegram.Parse(decrypted, parsedHeader);
-            case GrowattTelegramType.CONFIGURE:
-                return GrowattConfigureTelegram.Parse(decrypted, parsedHeader);
+            case GrowattTelegramType.QUERY_DATALOGGER:
+                return GrowattDataloggerQueryResponseTelegram.Parse(decrypted, parsedHeader);
+            case GrowattTelegramType.COMMAND_DATALOGGER:
+                return GrowattDataloggerCommandTelegram.Parse(decrypted, parsedHeader);
+            case GrowattTelegramType.COMMAND_INVERTER:
+                return GrowattInverterCommandResponseTelegram.Parse(decrypted, parsedHeader);
         }
 
         _logger.LogWarning("Failed to parse message of type {messageTypeRaw}", parsedHeader.MessageTypeRaw.ToHex());

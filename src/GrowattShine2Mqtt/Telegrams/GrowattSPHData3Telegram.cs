@@ -13,7 +13,7 @@ public class GrowattSPHData3Telegram : IGrowattTelegram
 
     public string Datalogserial { get; set; }
     public string Pvserial { get; set; }
-    public Instant? Date { get; set; }
+    public LocalDateTime? Date { get; set; }
 
     public static GrowattSPHData3Telegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {

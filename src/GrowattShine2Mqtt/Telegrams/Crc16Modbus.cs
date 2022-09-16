@@ -43,10 +43,10 @@ public class Crc16Modbus
         };
     }
 
-    public ushort ComputeChecksum(byte[] bytes)
+    public ushort ComputeChecksum(ArraySegment<byte> bytes)
     {
         ushort crc = 0xFFFF;
-        for (int i = 0; i < bytes.Length; ++i)
+        for (int i = 0; i < bytes.Count; ++i)
         {
             byte index = (byte)(crc ^ bytes[i]);
             crc = (ushort)((crc >> 8) ^ _table[index]);

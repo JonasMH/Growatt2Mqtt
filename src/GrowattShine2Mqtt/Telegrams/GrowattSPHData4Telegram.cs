@@ -13,7 +13,7 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
 
     public string Datalogserial { get; set; }
     public string Pvserial { get; set; }
-    public Instant? Date { get; set; }
+    public LocalDateTime? Date { get; set; }
     public int Recortype1 { get; set; }
     public int Recortype2 { get; set; }
     public short Pvstatus { get; set; }

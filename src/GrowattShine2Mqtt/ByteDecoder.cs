@@ -32,6 +32,14 @@ public class ByteDecoder<T>
         SetPropertyValue(_instance, memberLamda, BitConverter.ToInt16(reversed));
         return this;
     }
+    
+    public ByteDecoder<T> ReadUInt16(Expression<Func<T, ushort>> memberLamda, int pos)
+    {
+        var length = 2;
+        var reversed = _buffer.Array[(pos + _buffer.Offset)..].Take(length).Reverse().ToArray();
+        SetPropertyValue(_instance, memberLamda, BitConverter.ToUInt16(reversed));
+        return this;
+    }
 
     public ByteDecoder<T> ReadByte(Expression<Func<T, byte>> memberLamda, int pos)
     {
@@ -47,7 +55,7 @@ public class ByteDecoder<T>
         return this;
     }
 
-    public ByteDecoder<T> ReadGrowattDateTime(Expression<Func<T, Instant?>> memberLamda, int pos)
+    public ByteDecoder<T> ReadGrowattDateTime(Expression<Func<T, LocalDateTime?>> memberLamda, int pos)
     {
         var year = _buffer[pos] + 2000;
         var month = _buffer[pos + 1];
@@ -61,7 +69,7 @@ public class ByteDecoder<T>
             return this;
         }
 
-        var instant = Instant.FromUtc(year, month, day, hour, minute, second);
+        var instant = new LocalDateTime(year, month, day, hour, minute, second);
 
         SetPropertyValue(_instance, memberLamda, instant);
 
