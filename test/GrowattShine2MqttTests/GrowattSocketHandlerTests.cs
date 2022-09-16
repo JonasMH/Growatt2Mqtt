@@ -1,4 +1,5 @@
-﻿using Castle.Core.Logging;
+﻿using System.Text;
+using Castle.Core.Logging;
 using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Telegrams;
 using Microsoft.Extensions.Logging;
@@ -87,6 +88,29 @@ public class GrowattSocketHandlerTests
 
         Assert.True(_sut.Info.InverterRegisterValues.ContainsKey(0x0001), "Register didn't exist");
         Assert.Equal(0x0000, _sut.Info.InverterRegisterValues[0x0001]);
+    }
+    
+
+    [Fact]
+    public async Task HandleMessageAsync_ShouldHandleQueryDataLoggerResponse()
+    {
+        var input = "00010006003701190D222C402040467734257761747447726F7761747447726F7761747447726F686167467743585A51435977434F45524E417E485A4E80A0"
+            .ParseHex();
+
+        await _sut.HandleMessageAsync(input);
+
+        Assert.True(_sut.Info.DataloggerRegisterValues.ContainsKey((ushort)GrowattDataloggerRegisters.TIME), "Register didn't exist");
+
+        var registerData = _sut.Info.DataloggerRegisterValues[(ushort)GrowattDataloggerRegisters.TIME];
+        // 2022-09-16 23:02:19
+        var text = Encoding.UTF8.GetString(registerData);
+
+        Assert.Equal(new LocalDateTime(2017, 07, 01, 23, 59, 59).ToString(), text);
+    }
+
+    private class TestDecoderClass
+    {
+        public LocalDateTime? LocalDateTime { get; set; }
     }
 
 

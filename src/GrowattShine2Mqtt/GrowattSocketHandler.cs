@@ -94,15 +94,15 @@ public class GrowattSocketHandler
                 break;
             case GrowattDataloggerQueryResponseTelegram cmdResponseTelegram:
                 _logger.LogInformation("Datalogger register {register}={data}", cmdResponseTelegram.Register.ToHex(), cmdResponseTelegram.Data.ToHex());
-                Info.DataloggerRegisterValues.Add(cmdResponseTelegram.Register, cmdResponseTelegram.Data);
+                Info.DataloggerRegisterValues.AddOrUpdate(cmdResponseTelegram.Register, cmdResponseTelegram.Data);
                 break;
             case GrowattInverterCommandResponseTelegram inverterCommandResponse:
                 _logger.LogInformation("Inverter register {register}={data}", inverterCommandResponse.Register.ToHex(), inverterCommandResponse.Data.ToHex());
-                Info.InverterRegisterValues.Add(inverterCommandResponse.Register, inverterCommandResponse.Data);
+                Info.InverterRegisterValues.AddOrUpdate(inverterCommandResponse.Register, inverterCommandResponse.Data);
                 break;
             case GrowattInverterQueryResponseTelegram inverterQueryResponse:
                 _logger.LogInformation("Inverter register {register}={data}", inverterQueryResponse.Register.ToHex(), inverterQueryResponse.Data.ToHex());
-                Info.InverterRegisterValues.Add(inverterQueryResponse.Register, inverterQueryResponse.Data);
+                Info.InverterRegisterValues.AddOrUpdate(inverterQueryResponse.Register, inverterQueryResponse.Data);
                 break;
             case GrowattSPHData3Telegram data3Telegram:
                 _logger.LogInformation("We seem to have received a data telegram from {date}, ACKing... \n{telegram}", data3Telegram.Date, data3Telegram);
@@ -125,10 +125,10 @@ public class GrowattSocketHandler
 
     public async Task SendTelegramAsync(ISerializeableGrowattTelegram telegram)
     {
-        var data4Bytes = _telegramParser.PackMessage(telegram);
-        _logger.LogInformation("Sending {telegramType}: {telegramData}", telegram.GetType().Name, data4Bytes);
-        _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", data4Bytes.Count);
-        await _socket.SendAsync(data4Bytes);
+        var buffer = _telegramParser.PackMessage(telegram);
+        _logger.LogInformation("Sending {telegramType}: {telegramData}", telegram.GetType().Name, buffer.ToHex());
+        _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+        await _socket.SendAsync(buffer);
     }
 
     public async Task RunAsync()
@@ -153,6 +153,21 @@ public class GrowattSocketHandler
                 _logger.LogError(e, "Failed to handle socket");
                 return;
             }
+        }
+    }
+}
+
+
+public static class DictionaryExtensions
+{
+    public static void AddOrUpdate<TKey, TValue>(this Dictionary<TKey, TValue> dic, TKey key, TValue value)
+    {
+        if(dic.ContainsKey(key))
+        {
+            dic[key] = value;
+        } else
+        {
+            dic.Add(key, value);
         }
     }
 }

@@ -59,13 +59,14 @@ public class GrowattDataloggerQueryResponseTelegram : IGrowattTelegram
 
     public static GrowattDataloggerQueryResponseTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {
+        var offset = 20;
         var result = new ByteDecoder<GrowattDataloggerQueryResponseTelegram>(new GrowattDataloggerQueryResponseTelegram(header), bytes)
             .ReadString(x => x.Datalogserial, 8, 10)
-            .ReadUInt16(x => x.Register, 18)
-            .ReadInt16(x => x.DataLength, 20)
+            .ReadUInt16(x => x.Register, 18 + offset)
+            .ReadInt16(x => x.DataLength, 20 + offset)
             .Result;
 
-        result.Data = bytes.Skip(22).Take(result.DataLength).ToArray();
+        result.Data = bytes.Skip(22 + offset).Take(result.DataLength).ToArray();
 
         return result;
     }
