@@ -109,25 +109,34 @@ public class GrowattSocketHandlerTests
         Assert.Equal(new LocalDateTime(2017, 07, 01, 23, 59, 59).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), text);
     }
 
+    [Fact]
+    public async Task HandleMessageAsync_ShouldHandleQueryInveter()
+    {
+        var input = "00010006002601050D222C402040467734257761747447726F7761747447726F7761747447726F7F617C7A579058"
+            .ParseHex();
+
+        await _sut.HandleMessageAsync(input);
+
+        Assert.True(_sut.Info.InverterRegisterValues.ContainsKey(0x0008), "Register didn't exist");
+
+        var registerData = _sut.Info.InverterRegisterValues[0x0008];
+        Assert.Equal(8, registerData);
+    }
+
     private class TestDecoderClass
     {
         public LocalDateTime? LocalDateTime { get; set; }
     }
 
-
-    /*
     [Fact]
-    public async Task SendCommand_ACBattery()
+    public async Task SendTelegramAsync_GrowattDataloggerQueryTelegram()
     {
         // Change AC Output source to Batt priority
-        var input = "00010006002401060a252847233c4377415f7761747447726f7761747447726f7761747447726f766174c399"
-            .ParseHex();
-
-        await _sut.SendTelegramAsync(new GrowattInverterCommandTelegram
+        await _sut.SendTelegramAsync(new GrowattDataloggerQueryTelegram
         {
-            LoggerId = "MWG0BH7030",
-            Value = 0x0002,
-            Register = 0x1044,
+            LoggerId = "JPC7A420FJ",
+            StartingAddress = 0x0008,
+            EndAddress = 0x0008,
         });
         var encrypter = new GrowattTelegramEncrypter();
 
@@ -135,10 +144,9 @@ public class GrowattSocketHandlerTests
         var resultDecrypted = encrypter.Decrypt(result);
 
 
-        var expected = "00010006002401060a252847233c4377415f7761747447726f7761747447726f7761747447726f766174c399";
+        var expected = "00010006002401190D222C402040467734257761747447726F7761747447726F7761747447726F7F617C3490";
         var expectedDecrypted = encrypter.Decrypt(expected.ParseHex());
 
         Assert.Equal(expectedDecrypted.ToHex(), resultDecrypted.ToHex(), ignoreCase: true);
     }
-    */
 }

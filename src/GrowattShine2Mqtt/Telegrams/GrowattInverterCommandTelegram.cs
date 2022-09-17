@@ -74,5 +74,4 @@ public class GrowattInverterCommandResponseTelegram : IGrowattTelegram
             .ReadUInt16(x => x.Data, 21 + offset)
             .Result;
     }
-
 }
