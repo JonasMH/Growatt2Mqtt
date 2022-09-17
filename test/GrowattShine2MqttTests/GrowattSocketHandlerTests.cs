@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Castle.Core.Logging;
 using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Telegrams;
@@ -105,7 +106,7 @@ public class GrowattSocketHandlerTests
         // 2022-09-16 23:02:19
         var text = Encoding.UTF8.GetString(registerData);
 
-        Assert.Equal(new LocalDateTime(2017, 07, 01, 23, 59, 59).ToString(), text);
+        Assert.Equal(new LocalDateTime(2017, 07, 01, 23, 59, 59).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture), text);
     }
 
     private class TestDecoderClass
