@@ -25,7 +25,7 @@ message GetDataLoggerInfoRequest {
 message GetDataLoggerInfoResponse {
 	string datalogger = 1;
     map<uint32, bytes> datalogger_registers = 2;
-    map<uint32, bytes> inverter_registers = 3;
+    map<uint32, uint32> inverter_registers = 3;
 }
 
 message QueryDataLoggerRequest {

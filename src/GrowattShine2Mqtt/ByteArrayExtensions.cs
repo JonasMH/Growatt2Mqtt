@@ -12,15 +12,11 @@ public static class ByteArrayExtensions
     }
     public static string ToHex(this short input)
     {
-        var buffer = new byte[2];
-        BitConverter.TryWriteBytes(buffer, input);
-        return BitConverter.ToString(buffer).Replace("-", "");
+        return BitConverter.ToString(BitConverter.GetBytes(input).Reverse().ToArray()).Replace("-", "");
     }
     public static string ToHex(this ushort input)
     {
-        var buffer = new byte[2];
-        BitConverter.TryWriteBytes(buffer, input);
-        return BitConverter.ToString(buffer).Replace("-", "");
+        return BitConverter.ToString(BitConverter.GetBytes(input).Reverse().ToArray()).Replace("-", "");
     }
 }
 

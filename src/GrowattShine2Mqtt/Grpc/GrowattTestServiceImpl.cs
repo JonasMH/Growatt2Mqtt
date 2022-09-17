@@ -73,7 +73,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
         foreach (var inverterRegister in loggerSocket.Info.InverterRegisterValues)
         {
-            response.InverterRegisters.Add(inverterRegister.Key, ByteString.CopyFrom(BitConverter.GetBytes(inverterRegister.Value)));
+            response.InverterRegisters.Add(inverterRegister.Key, inverterRegister.Value);
         }
 
 
