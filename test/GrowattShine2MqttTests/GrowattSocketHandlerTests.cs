@@ -120,7 +120,7 @@ public class GrowattSocketHandlerTests
         Assert.True(_sut.Info.InverterRegisterValues.ContainsKey(0x0008), "Register didn't exist");
 
         var registerData = _sut.Info.InverterRegisterValues[0x0008];
-        Assert.Equal(8, registerData);
+        Assert.Equal(3600, registerData);
     }
 
     private class TestDecoderClass
