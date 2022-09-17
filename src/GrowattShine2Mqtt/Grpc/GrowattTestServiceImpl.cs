@@ -48,7 +48,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
         {
             LoggerId = request.Datalogger,
             Register = (ushort)request.Register,
-            Value = BitConverter.ToUInt16(request.Value.ToArray())
+            Value = (ushort)request.Value
         });
 
         return new CommandInverterResponse();

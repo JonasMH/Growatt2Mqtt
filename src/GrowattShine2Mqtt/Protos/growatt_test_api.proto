@@ -55,6 +55,6 @@ message QueryInverterResponse {}
 message CommandInverterRequest {
 	string datalogger = 1;
     uint32 register = 2;
-    bytes value = 3;
+    uint32 value = 3;
 }
 message CommandInverterResponse {}
