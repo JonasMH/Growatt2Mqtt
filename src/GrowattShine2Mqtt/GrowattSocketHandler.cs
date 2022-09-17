@@ -75,7 +75,7 @@ public class GrowattSocketHandler
         var header = GrowattTelegramHeader.Parse(buffer);
         var telegram = _telegramParser.ParseMessage(buffer);
 
-        _logger.LogInformation("Received {packageTypeRaw}({packetType}) packet of size {size} bytes v{protocolVersion}", header.MessageTypeRaw, header.MessageType, buffer.Count, header.ProtocolVersion);
+        _logger.LogInformation("Received {packageTypeRaw}({packetType}) packet of size {size} bytes v{protocolVersion}", header.MessageTypeRaw.ToHex(), header.MessageType, buffer.Count, header.ProtocolVersion);
         _logger.LogInformation("{packet}", buffer.ToHex());
 
         if (telegram == null)

@@ -22,6 +22,7 @@ builder.Host.UseSerilog((options, loggerConf) =>
 var services = builder.Services;
 
 services.AddGrpc();
+services.AddGrpcReflection();
 services.AddHealthChecks();
 services.AddSingleton<IGrowattTopicHelper, GrowattTopicHelper>();
 services.AddSingleton<IGrowattTelegramParser, GrowattTelegramParser>();
@@ -53,6 +54,10 @@ services.AddSingleton<MetricFactory>(x =>
 	return factory;
 });
 
+
+services.AddOptions<GrowattServerOptions>()
+    .BindConfiguration(nameof(GrowattServerOptions));
+
 services.AddSingleton<IGrowattMetrics, GrowattMetrics>();
 services.AddSingleton<IGrowattTelegramEncrypter, GrowattTelegramEncrypter>();
 services.AddSingleton<NodaTime.IClock>(x => NodaTime.SystemClock.Instance);
@@ -76,3 +81,5 @@ app.UseEndpoints(endpoints =>
 
 
 app.Run();
+
+public partial class Program { }
