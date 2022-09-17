@@ -84,4 +84,21 @@ public class GrowattTelegramParserTests
         Assert.Equal(0x0001, telegram.Register);
         Assert.Equal(0x0000, telegram.Data);
     }
+
+    [Fact]
+    public void QueryInverterResponseTelegram()
+    {
+        // Change AC Output source to Batt priority
+        var input = "00010006002601050D222C402040467734257761747447726F7761747447726F7761747447726C866285700B5B12"
+            .ParseHex();
+
+        var result = _sut.ParseMessage(input);
+
+        Assert.IsType<GrowattInverterQueryResponseTelegram>(result);
+
+        var telegram = result as GrowattInverterQueryResponseTelegram;
+        Assert.Equal("JPC7A420FJ", telegram.Datalogserial);
+        Assert.Equal(0x03F1, telegram.Register);
+        Assert.Equal(1100, telegram.Data);
+    }
 }

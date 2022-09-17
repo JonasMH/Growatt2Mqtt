@@ -68,7 +68,7 @@ public class GrowattInverterQueryResponseTelegram : IGrowattTelegram
         return new ByteDecoder<GrowattInverterQueryResponseTelegram>(new GrowattInverterQueryResponseTelegram(header), bytes)
             .ReadString(x => x.Datalogserial, 8, 10)
             .ReadUInt16(x => x.Register, 18 + offset)
-            .ReadUInt16(x => x.Data, 20 + offset)
+            .ReadUInt16(x => x.Data, 22 + offset)
             .Result;
     }
 
