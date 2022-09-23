@@ -72,6 +72,7 @@ public class GrowattTelegramParserTests
     public void CommandInverterTelegram()
     {
         // Change AC Output source to Batt priority
+        //           00010006002401060a252847233c4377415f7761747447726f7761747447726f7761747447726f766174c399
         var input = "00010006002501060a252847233c4377415f7761747447726f7761747447726f7761747447726f766174748492"
             .ParseHex();
 
@@ -88,7 +89,6 @@ public class GrowattTelegramParserTests
     [Fact]
     public void QueryInverterResponseTelegram()
     {
-        // Change AC Output source to Batt priority
         var input = "00010006002601050D222C402040467734257761747447726F7761747447726F7761747447726C866285700B5B12"
             .ParseHex();
 

@@ -76,7 +76,7 @@ public class GrowattSocketHandler
         var telegram = _telegramParser.ParseMessage(buffer);
 
         _logger.LogInformation("Received {packageTypeRaw}({packetType}) packet of size {size} bytes v{protocolVersion}", header.MessageTypeRaw.ToHex(), header.MessageType, buffer.Count, header.ProtocolVersion);
-        _logger.LogInformation("{packet}", buffer.ToHex());
+        _logger.LogInformation("0x{packet}", buffer.ToHex());
 
         if (telegram == null)
         {
@@ -93,15 +93,15 @@ public class GrowattSocketHandler
                 await _socket.SendAsync(buffer);
                 break;
             case GrowattDataloggerQueryResponseTelegram cmdResponseTelegram:
-                _logger.LogInformation("Datalogger register {register}={data}", cmdResponseTelegram.Register.ToHex(), cmdResponseTelegram.Data.ToHex());
+                _logger.LogInformation("Datalogger register {register}=0x{data}", cmdResponseTelegram.Register, cmdResponseTelegram.Data.ToHex());
                 Info.DataloggerRegisterValues.AddOrUpdate(cmdResponseTelegram.Register, cmdResponseTelegram.Data);
                 break;
             case GrowattInverterCommandResponseTelegram inverterCommandResponse:
-                _logger.LogInformation("Inverter register {register}={data}", inverterCommandResponse.Register.ToHex(), inverterCommandResponse.Data.ToHex());
+                _logger.LogInformation("Inverter register {register}={data}/{dataHex}", inverterCommandResponse.Register, inverterCommandResponse.Data, inverterCommandResponse.Data.ToHex());
                 Info.InverterRegisterValues.AddOrUpdate(inverterCommandResponse.Register, inverterCommandResponse.Data);
                 break;
             case GrowattInverterQueryResponseTelegram inverterQueryResponse:
-                _logger.LogInformation("Inverter register {register}={data}", inverterQueryResponse.Register.ToHex(), inverterQueryResponse.Data.ToHex());
+                _logger.LogInformation("Inverter register {register}={data}/{dataHex}", inverterQueryResponse.Register, inverterQueryResponse.Data, inverterQueryResponse.Data.ToHex());
                 Info.InverterRegisterValues.AddOrUpdate(inverterQueryResponse.Register, inverterQueryResponse.Data);
                 break;
             case GrowattSPHData3Telegram data3Telegram:
@@ -126,15 +126,15 @@ public class GrowattSocketHandler
     public async Task SendTelegramAsync(ISerializeableGrowattTelegram telegram)
     {
         var buffer = _telegramParser.PackMessage(telegram);
-        _logger.LogInformation("Sending {telegramType}: {telegramData}", telegram.GetType().Name, buffer.ToHex());
+        _logger.LogInformation("Sending {telegramType}: 0x{telegramData}", telegram.GetType().Name, buffer.ToHex());
         _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
         await _socket.SendAsync(buffer);
     }
 
-    public async Task RunAsync()
+    public async Task RunAsync(CancellationToken token)
     {
         byte[] buffer = new byte[1024 * 8];
-        while (true)
+        while (!token.IsCancellationRequested)
         {
             if (_socket.Available <= 0)
             {
