@@ -67,7 +67,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
 
     private async Task TryCleanupSocketsAsync()
     {
-        _logger.LogInformation("Cleaing up sockets...");
+        _logger.LogInformation("Cleaning up sockets...");
         try
         {
             foreach (var disconnectedSocket in _socketRefs.Where(x => !x.Socket.Connected).ToList())
@@ -136,8 +136,14 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
     {
         while(!_serviceRunningToken.IsCancellationRequested)
         {
+            try
+            {
+                await TryCleanupSocketsAsync();
+            }catch (Exception e)
+            {
+                _logger.LogError(e, "Socket cleanup failed");
+            }
             await Task.Delay(TimeSpan.FromSeconds(5));
-            await TryCleanupSocketsAsync();
         }
     }
 

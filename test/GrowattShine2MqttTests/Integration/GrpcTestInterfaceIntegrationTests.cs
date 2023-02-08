@@ -30,7 +30,7 @@ public class GrpcTestInterfaceIntegrationTests : IAsyncLifetime
         await reflectionStream.RequestStream.CompleteAsync();
 
         await reflectionStream.ResponseStream.MoveNext(default);
-        var reflectionResponse = reflectionStream.ResponseStream.Current;
+        var reflectionResponse = reflectionStream.ResponseStream.Current; 
 
 
         Assert.NotNull(reflectionResponse);
