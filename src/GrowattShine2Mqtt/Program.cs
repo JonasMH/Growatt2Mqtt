@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NodaTime;
 using Prometheus;
 using Serilog;
+using Serilog.Formatting.Compact;
 using ToMqttNet;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,7 +16,7 @@ builder.Host.UseSerilog((options, loggerConf) =>
 		.MinimumLevel.Debug()
 		.Enrich.FromLogContext()
 		.Enrich.WithThreadId()
-		.WriteTo.Console(outputTemplate: "[{Timestamp:yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz} {Level:u3} {ThreadId} {SourceContext}] {Message:lj}{NewLine}{Exception}")
+		.WriteTo.Console(new CompactJsonFormatter())
 		.ReadFrom.Configuration(options.Configuration);
 });
 

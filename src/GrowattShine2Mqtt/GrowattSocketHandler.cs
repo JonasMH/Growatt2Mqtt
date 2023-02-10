@@ -8,6 +8,8 @@ namespace GrowattShine2Mqtt;
 public interface IGrowattSocket
 {
     int Available { get; }
+    int SocketId { get; }
+    bool Connected { get; }
     Task SendAsync(ArraySegment<byte> buffer);
     Task<int> ReceiveAsync(ArraySegment<byte> buffer);
 }
@@ -15,13 +17,16 @@ public interface IGrowattSocket
 public class GrowattSocket : IGrowattSocket
 {
     private readonly Socket _socket;
+    private readonly int _socketId;
 
-    public GrowattSocket(Socket socket)
+    public GrowattSocket(Socket socket, int socketId)
     {
         _socket = socket;
     }
 
     public int Available => _socket.Available;
+    public int SocketId => _socketId;
+    public bool Connected => _socket.Connected;
 
     public async Task SendAsync(ArraySegment<byte> buffer)
     {
@@ -141,8 +146,14 @@ public class GrowattSocketHandler
         {
             if (_socket.Available <= 0)
             {
-                await Task.Delay(5, token);
+                await Task.Delay(TimeSpan.FromMilliseconds(5), token);
                 continue;
+            }
+
+            if(!_socket.Connected)
+            {
+                _logger.LogInformation("Socket {socketid} no longer connected", _socket.SocketId);
+                return;
             }
 
             try
@@ -153,7 +164,7 @@ public class GrowattSocketHandler
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to handle socket");
+                _logger.LogError(e, "Failed to handle socket {socketid}", _socket.SocketId);
                 return;
             }
         }

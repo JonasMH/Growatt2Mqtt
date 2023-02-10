@@ -113,7 +113,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
                 _logger.LogInformation("Got connection from {endpoint} (SocketId {socketId})", socket.RemoteEndPoint, socketId);
                 _metrics.NewConnection();
 
-                var handler = ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, (IGrowattSocket)(new GrowattSocket(socket)));
+                var handler = ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, (IGrowattSocket)(new GrowattSocket(socket, socketId)));
                 var socketRef = new GrowattSocketReference
                 {
                     Handler = handler,
@@ -143,7 +143,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
             {
                 _logger.LogError(e, "Socket cleanup failed");
             }
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(15));
         }
     }
 
