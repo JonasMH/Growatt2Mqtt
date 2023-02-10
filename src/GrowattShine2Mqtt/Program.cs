@@ -1,6 +1,5 @@
 ﻿using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Grpc;
-using Microsoft.Extensions.DependencyInjection;
 using NodaTime;
 using Prometheus;
 using Serilog;
