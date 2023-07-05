@@ -116,7 +116,7 @@ public class GrowattTelegramParser : IGrowattTelegramParser
                 return GrowattInverterQueryResponseTelegram.Parse(decrypted, parsedHeader);
         }
 
-        _logger.LogWarning("Unable to handle telegrams of type {messageTypeRaw}. Packet: {data}", parsedHeader.MessageTypeRaw.ToHex(), decrypted.ToHex());
+        _logger.LogWarning("Unable to handle telegrams of type {messageTypeRaw}. Packet: {data}", parsedHeader.MessageTypeRaw.ToHex(), buffer.ToHex());
         return null;
     }
 }
