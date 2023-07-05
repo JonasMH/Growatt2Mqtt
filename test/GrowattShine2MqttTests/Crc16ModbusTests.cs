@@ -1,5 +1,4 @@
-﻿using Castle.Core.Logging;
-using GrowattShine2Mqtt;
+﻿using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Telegrams;
 
 namespace GrowattShine2MqttTests;

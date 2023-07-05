@@ -2,7 +2,6 @@
 
 public class Crc16Modbus
 {
-    private readonly ushort _polynomial = 0xA001;
     private readonly ushort[] _table = new ushort[256];
 
     public Crc16Modbus()

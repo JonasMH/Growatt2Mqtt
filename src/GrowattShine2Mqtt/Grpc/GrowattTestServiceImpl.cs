@@ -18,6 +18,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
     public override async Task<CommandDataLoggerResponse> CommandDatalogger(CommandDataLoggerRequest request, ServerCallContext context)
     {
+        _logger.LogInformation("Commanding datalogger");
         var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if(loggerSocket == null)
@@ -37,6 +38,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
     public override async Task<CommandInverterResponse> CommandInverter(CommandInverterRequest request, ServerCallContext context)
     {
+        _logger.LogInformation("Commanding inverter");
         var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
@@ -46,7 +48,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
         await loggerSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
-            LoggerId = request.Datalogger,
+            DataloggerId = request.Datalogger,
             Register = (ushort)request.Register,
             Value = (ushort)request.Value
         });
@@ -91,6 +93,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
     public override async Task<QueryDataLoggerResponse> QueryDatalogger(QueryDataLoggerRequest request, ServerCallContext context)
     {
+        _logger.LogInformation("Query datalogger");
         var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
@@ -101,7 +104,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
         await loggerSocket.SendTelegramAsync(new GrowattDataloggerQueryTelegram()
         {
             LoggerId = request.Datalogger,
-            StartingAddress = (ushort)request.StartRegister,
+            StartAddress = (ushort)request.StartRegister,
             EndAddress = (ushort)request.EndRegister
         });
 
@@ -110,6 +113,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
     public override async Task<QueryInverterResponse> QueryInverter(QueryInverterRequest request, ServerCallContext context)
     {
+        _logger.LogInformation("Query inverter");
         var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
@@ -119,8 +123,8 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
         await loggerSocket.SendTelegramAsync(new GrowattInverterQueryTelegram()
         {
-            LoggerId = request.Datalogger,
-            StartingAddress = (ushort)request.StartRegister,
+            DataloggerId = request.Datalogger,
+            StartAddress = (ushort)request.StartRegister,
             EndAddress = (ushort)request.EndRegister
         });
 

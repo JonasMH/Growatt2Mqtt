@@ -1,14 +1,8 @@
-﻿using System.Xml.Linq;
-using System;
-using GrowattShine2Mqtt.Telegrams;
+﻿using GrowattShine2Mqtt.Telegrams;
 using ToMqttNet;
 using MQTTnet;
-using Newtonsoft.Json.Linq;
-using System.Text.Json;
 using NodaTime;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System.Reactive;
 
 namespace GrowattShine2Mqtt;
 

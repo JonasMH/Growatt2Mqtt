@@ -110,7 +110,7 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
 
     public static GrowattSPHData4Telegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {
-        return new ByteDecoder<GrowattSPHData4Telegram>(new GrowattSPHData4Telegram(header), bytes)
+        return new GrowattByteDecoderBuilder<GrowattSPHData4Telegram>(new GrowattSPHData4Telegram(header), bytes)
             .ReadString(x => x.Datalogserial, 16 / 2, 10)
             .ReadString(x => x.Pvserial, 76 / 2, 10)
             .ReadGrowattDateTime(x => x.Date, 136 / 2)
@@ -203,9 +203,9 @@ public class GrowattSPHData4TelegramAck : IGrowattTelegram, ISerializeableGrowat
     {
         var buffer = new List<byte>();
 
-        buffer.AddRange(Header.Original[0..4]); // ??
+        buffer.AddRange(Header.Bytes[0..4]); // ??
         buffer.AddRange(new byte[] { 0x00, 0x00 }); // Make space for length
-        buffer.AddRange(Header.Original[6..8]); // Add message type
+        buffer.AddRange(Header.Bytes[6..8]); // Add message type
         buffer.Add(0x00); // Add magic
         return buffer.ToArray();
     }

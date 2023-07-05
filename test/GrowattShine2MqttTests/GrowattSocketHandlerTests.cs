@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Text;
-using Castle.Core.Logging;
 using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Telegrams;
 using Microsoft.Extensions.Logging;
@@ -123,11 +122,6 @@ public class GrowattSocketHandlerTests
         Assert.Equal(3600, registerData);
     }
 
-    private class TestDecoderClass
-    {
-        public LocalDateTime? LocalDateTime { get; set; }
-    }
-
     [Fact]
     public async Task SendTelegramAsync_GrowattDataloggerQueryTelegram()
     {
@@ -135,7 +129,7 @@ public class GrowattSocketHandlerTests
         await _sut.SendTelegramAsync(new GrowattDataloggerQueryTelegram
         {
             LoggerId = "JPC7A420FJ",
-            StartingAddress = 0x0008,
+            StartAddress = 0x0008,
             EndAddress = 0x0008,
         });
         var encrypter = new GrowattTelegramEncrypter();

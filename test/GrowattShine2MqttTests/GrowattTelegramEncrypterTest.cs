@@ -2,27 +2,6 @@
 
 namespace GrowattShine2MqttTests;
 
-public class ByteArrayExtensionsTests
-{
-    [Fact]
-    public void ShortToHex()
-    {
-        Assert.Equal("01F1", ((short)0x01F1).ToHex());
-    }
-
-    [Fact]
-    public void UShortToHex()
-    {
-        Assert.Equal("01F1", ((ushort)0x01F1).ToHex());
-    }
-
-    [Fact]
-    public void ByteArrayToHex()
-    {
-        Assert.Equal("4223", new byte[] {0x42, 0x23}.ToHex());
-    }
-}
-
 public class GrowattTelegramEncrypterTest {
     private readonly GrowattTelegramEncrypter _sut = new();
 
@@ -32,7 +11,7 @@ public class GrowattTelegramEncrypterTest {
     }
 
     [Fact]
-    public void Test1()
+    public void ShouldDecryptExample()
     {
         var input = "309C236A6DB2265A4C807E70080045000050000A0000FE063641C0A804E4C0A800281658149F000019961656F70A501816D0AB96000000030006002001160D222C402040467734257761747447726F7761747447726F7761747447722142"
             .ParseHex();
@@ -43,5 +22,19 @@ public class GrowattTelegramEncrypterTest {
         var expected = "309c236a6db2265a0bf2110769743147723f776b7474b9745936a1dc70a3b2c77749622c53ed6f7778e262118565277962a4ece46f7761777441724f767779566b324f3727034062050e0315330628050e0315330628050e031533066630";
 
         Assert.Equal(expected, BitConverter.ToString(result.ToArray()).Replace("-", ""), ignoreCase: true);
+    }
+
+
+
+    [Fact]
+    public void ShouldDecryptEncryptToSame()
+    {
+        var input = "309C236A6DB2265A4C807E70080045000050000A0000FE063641C0A804E4C0A800281658149F000019961656F70A501816D0AB96000000030006002001160D222C402040467734257761747447726F7761747447726F7761747447722142"
+            .ParseHex();
+
+        var result = _sut.Decrypt(input);
+        result = _sut.Decrypt(result);
+
+        Assert.Equal(input.ToHex(), result.ToHex());
     }
 }

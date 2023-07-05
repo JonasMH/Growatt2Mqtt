@@ -15,4 +15,14 @@ public class GrowattTelegramHeaderTests
         Assert.Equal(831, result.MessageLength);
         Assert.Equal(GrowattTelegramType.DATA4, result.MessageType);
     }
+    [Fact]
+    public void SetMessageType()
+    {
+        var result = new GrowattTelegramHeader()
+        {
+            MessageTypeRaw = (short)GrowattTelegramType.DATA4
+        };
+
+        Assert.Equal(GrowattTelegramType.DATA4, result.MessageType);
+    }
 }

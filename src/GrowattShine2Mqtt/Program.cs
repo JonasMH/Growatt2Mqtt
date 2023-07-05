@@ -71,14 +71,10 @@ var app = builder.Build();
 
 app.UseRouting();
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapGrpcReflectionService();
-    endpoints.MapGrpcService<GrowattTestServiceImpl>();
-    endpoints.MapHealthChecks("/health");
-    endpoints.MapMetrics("/metrics", endpoints.ServiceProvider.GetRequiredService<CollectorRegistry>());
-});
-
+app.MapGrpcReflectionService();
+app.MapGrpcService<GrowattTestServiceImpl>();
+app.MapHealthChecks("/health");
+app.MapMetrics("/metrics", app.Services.GetRequiredService<CollectorRegistry>());
 
 app.Run();
 

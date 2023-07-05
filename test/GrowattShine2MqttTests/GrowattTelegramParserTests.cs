@@ -5,6 +5,28 @@ using Moq;
 
 namespace GrowattShine2MqttTests;
 
+public class GrowattInverterCommandTelegramTests
+{
+    [Fact]
+    public void Test1()
+    {
+        var telegram = new GrowattInverterCommandTelegram()
+        {
+            DataloggerId = "0123456789",
+            Register = 0x0F,
+            Value = 0xF0
+        };
+
+        var bytes = telegram.ToBytes();
+
+        var parsed = GrowattInverterCommandTelegram.Parse(bytes, new GrowattTelegramHeader());
+
+        Assert.Equal(telegram.Register, parsed.Register);
+        Assert.Equal(telegram.Value, parsed.Value);
+    }
+
+}
+
 public class GrowattTelegramParserTests
 {
     private readonly GrowattTelegramParser _sut;
@@ -66,6 +88,11 @@ public class GrowattTelegramParserTests
         var result = _sut.ParseMessage(input);
 
         Assert.IsType<GrowattSPHPingTelegram>(result);
+
+
+        var pingTelegram = (result as GrowattSPHPingTelegram)!;
+
+        Assert.Equal("JPC7A420FJ", pingTelegram.DataLoggerId);
     }
 
     [Fact]
@@ -81,7 +108,7 @@ public class GrowattTelegramParserTests
         Assert.IsType<GrowattInverterCommandResponseTelegram>(result);
 
         var telegram = result as GrowattInverterCommandResponseTelegram;
-        Assert.Equal("MWG0BH7030", telegram.Datalogserial);
+        Assert.Equal("MWG0BH7030", telegram.DataloggerId);
         Assert.Equal(0x0001, telegram.Register);
         Assert.Equal(0x0000, telegram.Data);
     }
@@ -97,7 +124,7 @@ public class GrowattTelegramParserTests
         Assert.IsType<GrowattInverterQueryResponseTelegram>(result);
 
         var telegram = result as GrowattInverterQueryResponseTelegram;
-        Assert.Equal("JPC7A420FJ", telegram.Datalogserial);
+        Assert.Equal("JPC7A420FJ", telegram.DataloggerId);
         Assert.Equal(0x03F1, telegram.Register);
         Assert.Equal(1100, telegram.Data);
     }

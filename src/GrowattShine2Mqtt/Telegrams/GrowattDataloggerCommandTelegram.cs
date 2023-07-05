@@ -1,7 +1,5 @@
 ﻿using System.Globalization;
 using System.Text;
-using Microsoft.Win32;
-using Newtonsoft.Json.Linq;
 using NodaTime;
 
 namespace GrowattShine2Mqtt.Telegrams;
@@ -23,12 +21,9 @@ public class GrowattDataloggerCommandTelegram : IGrowattTelegram, ISerializeable
 {
     public GrowattDataloggerCommandTelegram()
     {
-        Header = new GrowattTelegramHeader()
+        Header = new GrowattTelegramHeader
         {
-            Original = new byte[8]
-            {
-                0x00, 0x01, 0x00, 0x06, 0x00, 0x00, 0x01, 0x18
-            }
+            MessageType = GrowattTelegramType.COMMAND_DATALOGGER
         };
     }
 
@@ -41,21 +36,13 @@ public class GrowattDataloggerCommandTelegram : IGrowattTelegram, ISerializeable
 
     public byte[] ToBytes()
     {
-        // In : 00 01 00 06 00 37 01 18 0d 22 ..
-        //      ?? ?? ?? pp ll ll tt tt data
-        // ll ll = tt + data length
-        // tt tt = message type
-        // pp = protocol version
-
         var buffer = new List<byte>();
 
-        buffer.AddRange(Header.Original[0..4]); // ??
-        buffer.AddRange(new byte[2]); // Make space for length
-        buffer.AddRange(Header.Original[6..8]); // Add message type
-        buffer.AddRange(Encoding.UTF8.GetBytes(LoggerId)); // 10 Bytes
+        buffer.AddRange(Header.Bytes);
+        buffer.AddRange(GrowattByteDecoder.Instance.WriteString(LoggerId)); // 10 Bytes
         buffer.AddRange(new byte[20]); // Random space??
-        buffer.AddRange(BitConverter.GetBytes(Register).Reverse());
-        buffer.AddRange(BitConverter.GetBytes((short)Value.Length).Reverse());
+        buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16(Register));
+        buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16((ushort)Value.Length));
         buffer.AddRange(Value);
 
         return buffer.ToArray();
@@ -63,7 +50,7 @@ public class GrowattDataloggerCommandTelegram : IGrowattTelegram, ISerializeable
 
     public static GrowattDataloggerCommandTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {
-        return new ByteDecoder<GrowattDataloggerCommandTelegram>(new GrowattDataloggerCommandTelegram() { Header = header }, bytes)
+        return new GrowattByteDecoderBuilder<GrowattDataloggerCommandTelegram>(new GrowattDataloggerCommandTelegram() { Header = header }, bytes)
             .Result;
     }
 }

@@ -13,7 +13,7 @@ public class GrowattSPHPingTelegram : IGrowattTelegram
 
     public static GrowattSPHPingTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {
-        return new ByteDecoder<GrowattSPHPingTelegram>(new GrowattSPHPingTelegram(header), bytes)
+        return new GrowattByteDecoderBuilder<GrowattSPHPingTelegram>(new GrowattSPHPingTelegram(header), bytes)
             .ReadString(x => x.DataLoggerId, 8, 10)
             .Result;
     }

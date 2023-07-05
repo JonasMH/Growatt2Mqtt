@@ -1,6 +1,4 @@
-﻿using System;
-using System.Net.NetworkInformation;
-using GrowattShine2Mqtt.Telegrams;
+﻿using GrowattShine2Mqtt.Telegrams;
 
 namespace GrowattShine2Mqtt;
 
@@ -15,6 +13,9 @@ public interface IGrowattTelegramEncrypter
     byte[] Decrypt(ArraySegment<byte> buffer);
 }
 
+/// <summary>
+/// GrowattShine Packages are XOR'ed with the string "Growatt" for whatever reason
+/// </summary>
 public class GrowattTelegramEncrypter : IGrowattTelegramEncrypter
 {
     public byte[] Decrypt(ArraySegment<byte> buffer)
@@ -50,7 +51,6 @@ public class GrowattTelegramParser : IGrowattTelegramParser
 
     public ArraySegment<byte> PackMessage(ISerializeableGrowattTelegram telegram)
     {
-
         // In : 00 25 00 06 02 41 01 03 0d 22 2c 402040467734257761...
         // Out: 00 25 00 06 00 03 01 03 47 F7 D9
         //      ?? ?? ?? ?? ll ll tt tt data crc crc

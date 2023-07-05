@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using GrowattShine2Mqtt.Telegrams;
 using NodaTime;
 
@@ -22,6 +21,7 @@ public class GrowattSocket : IGrowattSocket
     public GrowattSocket(Socket socket, int socketId)
     {
         _socket = socket;
+        _socketId = socketId;
     }
 
     public int Available => _socket.Available;
@@ -105,7 +105,7 @@ public class GrowattSocketHandler
                 Info.DataloggerRegisterValues.AddOrUpdate(cmdResponseTelegram.Register, cmdResponseTelegram.Data);
                 break;
             case GrowattInverterCommandResponseTelegram inverterCommandResponse:
-                _logger.LogInformation("Inverter register {register}={data}/{dataHex}", inverterCommandResponse.Register, inverterCommandResponse.Data, inverterCommandResponse.Data.ToHex());
+                _logger.LogInformation("Inverter register (Result={result}) {register}={data}/{dataHex}", inverterCommandResponse.Result, inverterCommandResponse.Register, inverterCommandResponse.Data, inverterCommandResponse.Data.ToHex());
                 Info.InverterRegisterValues.AddOrUpdate(inverterCommandResponse.Register, inverterCommandResponse.Data);
                 break;
             case GrowattInverterQueryResponseTelegram inverterQueryResponse:
