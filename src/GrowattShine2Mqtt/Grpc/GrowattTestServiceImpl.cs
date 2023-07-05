@@ -26,12 +26,17 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
             throw new RpcException(new Status(StatusCode.NotFound, $"Datalogger {request.Datalogger} wasn't found"));
         }
 
-        await loggerSocket.SendTelegramAsync(new GrowattDataloggerCommandTelegram()
+        var telegram = new GrowattDataloggerCommandTelegram()
         {
             LoggerId = request.Datalogger,
             Register = (ushort)request.Register,
             Value = request.Value.ToArray().Reverse().ToArray()
-        });
+        };
+
+        _logger.LogInformation("Commanding datalogger {datalogger} setting register {registerAddr} to {registerValue}", telegram.LoggerId, telegram.Register, telegram.Value);
+
+
+        await loggerSocket.SendTelegramAsync(telegram);
 
         return new CommandDataLoggerResponse();
     }
@@ -46,12 +51,16 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
             throw new RpcException(new Status(StatusCode.NotFound, $"Datalogger {request.Datalogger} wasn't found"));
         }
 
-        await loggerSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
+        var telegram = new GrowattInverterCommandTelegram()
         {
             DataloggerId = request.Datalogger,
             Register = (ushort)request.Register,
             Value = (ushort)request.Value
-        });
+        };
+
+        _logger.LogInformation("Commanding inverter {datalogger} setting register {registerAddr} to {registerValue}", telegram.DataloggerId, telegram.Register, telegram.Value);
+
+        await loggerSocket.SendTelegramAsync(telegram);
 
         return new CommandInverterResponse();
     }
@@ -93,7 +102,6 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
     public override async Task<QueryDataLoggerResponse> QueryDatalogger(QueryDataLoggerRequest request, ServerCallContext context)
     {
-        _logger.LogInformation("Query datalogger");
         var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
@@ -101,12 +109,16 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
             throw new RpcException(new Status(StatusCode.NotFound, $"Datalogger {request.Datalogger} wasn't found"));
         }
 
-        await loggerSocket.SendTelegramAsync(new GrowattDataloggerQueryTelegram()
+        var telegram = new GrowattDataloggerQueryTelegram()
         {
             LoggerId = request.Datalogger,
             StartAddress = (ushort)request.StartRegister,
             EndAddress = (ushort)request.EndRegister
-        });
+        };
+
+        _logger.LogInformation("Querying datalogger {datalogger} registers {startRegister} to {endRegister}", telegram.LoggerId, telegram.StartAddress, telegram.EndAddress);
+
+        await loggerSocket.SendTelegramAsync(telegram);
 
         return new QueryDataLoggerResponse();
     }
@@ -121,12 +133,16 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
             throw new RpcException(new Status(StatusCode.NotFound, $"Datalogger {request.Datalogger} wasn't found"));
         }
 
-        await loggerSocket.SendTelegramAsync(new GrowattInverterQueryTelegram()
+        var telegram = new GrowattInverterQueryTelegram()
         {
             DataloggerId = request.Datalogger,
             StartAddress = (ushort)request.StartRegister,
             EndAddress = (ushort)request.EndRegister
-        });
+        };
+
+        _logger.LogInformation("Querying inverter {datalogger} registers {startRegister} to {endRegister}", telegram.DataloggerId, telegram.StartAddress, telegram.EndAddress);
+
+        await loggerSocket.SendTelegramAsync(telegram);
 
         return new QueryInverterResponse();
     }
