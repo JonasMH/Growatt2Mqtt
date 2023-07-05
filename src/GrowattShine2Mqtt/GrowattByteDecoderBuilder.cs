@@ -169,8 +169,7 @@ public class GrowattByteDecoderBuilder<T>
 
     private void SetPropertyValue<T, TValue>(T target, Expression<Func<T, TValue>> memberLamda, TValue value)
     {
-        var memberSelectorExpression = memberLamda.Body as MemberExpression;
-        if (memberSelectorExpression != null)
+        if (memberLamda.Body is MemberExpression memberSelectorExpression)
         {
             var property = memberSelectorExpression.Member as PropertyInfo;
             if (property != null)

@@ -94,7 +94,7 @@ public class GrowattTelegramParser : IGrowattTelegramParser
 
         if (expectedCrc[0] != buffer[^2] || expectedCrc[1] != buffer[^1])
         {
-            _logger.LogWarning("Skipping telegram due to CRC Check failed. Telegram {telgram}. Expected {expectedCrc} was {actualCrc}", buffer.ToHex(), expectedCrc.ToHex(), buffer[^2..].ToHex());
+            _logger.LogWarning("Failed to parse telegram due to CRC Check failed. Telegram {telgram}. Expected {expectedCrc} was {actualCrc}", buffer.ToHex(), expectedCrc.ToHex(), buffer[^2..].ToHex());
             return null;
         }
 
@@ -116,7 +116,7 @@ public class GrowattTelegramParser : IGrowattTelegramParser
                 return GrowattInverterQueryResponseTelegram.Parse(decrypted, parsedHeader);
         }
 
-        _logger.LogWarning("Unable to handle telegrams of type {messageTypeRaw}", parsedHeader.MessageTypeRaw.ToHex());
+        _logger.LogWarning("Unable to handle telegrams of type {messageTypeRaw}. Packet: {data}", parsedHeader.MessageTypeRaw.ToHex(), decrypted.ToHex());
         return null;
     }
 }

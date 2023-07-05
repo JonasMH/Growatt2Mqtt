@@ -80,7 +80,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
 
             foreach (var stoppedHandlerSocket in _socketRefs.Where(x => x.HandlerRunTask.IsCompleted).ToList())
             {
-                _logger.LogInformation("Cleaning up socket {socketId} due to handler being stopped, disconnecting if needed", stoppedHandlerSocket.Id);
+                _logger.LogInformation(stoppedHandlerSocket.HandlerRunTask.Exception, "Cleaning up socket {socketId} due to handler being stopped, disconnecting if needed", stoppedHandlerSocket.Id);
                 _socketRefs.Remove(stoppedHandlerSocket);
                 if (stoppedHandlerSocket.Socket.Connected)
                 {
