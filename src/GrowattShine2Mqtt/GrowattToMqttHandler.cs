@@ -277,7 +277,7 @@ public class MqttSensorDiscoveryConfigBuilder
     {
         Config = new MqttSensorDiscoveryConfig
         {
-            Name = "Solar - " + displayName,
+            Name = displayName,
             UniqueId = data4Telegram.Datalogserial.ToLower() + "_" + propertyName.ToLower(),
             Device = new MqttDiscoveryDevice
             {
