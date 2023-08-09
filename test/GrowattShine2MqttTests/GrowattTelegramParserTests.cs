@@ -1,7 +1,5 @@
 ﻿using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Telegrams;
-using Microsoft.Extensions.Logging;
-using Moq;
 
 namespace GrowattShine2MqttTests;
 
@@ -36,7 +34,7 @@ public class GrowattTelegramParserTests
 
     public GrowattTelegramParserTests()
     {
-        _sut = new GrowattTelegramParser(new Mock<ILogger<GrowattTelegramParser>>().Object, new GrowattTelegramEncrypter());
+        _sut = new GrowattTelegramParser(new LoggerMock<GrowattTelegramParser>(), new GrowattTelegramEncrypter());
     }
 
     [Fact]
