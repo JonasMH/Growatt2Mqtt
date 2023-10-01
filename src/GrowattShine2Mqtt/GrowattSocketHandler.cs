@@ -97,7 +97,7 @@ public class GrowattSocketHandler
         {
             case GrowattSPHPingTelegram _:
                 _logger.LogInformation("Received a ping, echoing...");
-                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+                _metrics?.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
                 await _socket.SendAsync(buffer);
                 break;
             case GrowattDataloggerQueryResponseTelegram cmdResponseTelegram:
