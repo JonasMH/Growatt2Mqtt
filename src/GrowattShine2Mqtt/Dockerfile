@@ -26,4 +26,4 @@ RUN rm /app/*.dbg /app/*.Development.json
 FROM mcr.microsoft.com/dotnet/nightly/runtime-deps:8.0-alpine-aot AS final
 WORKDIR /app
 COPY --from=build /app .
-ENTRYPOINT ["dotnet", "GrowattShine2Mqtt.dll"]
+ENTRYPOINT ["./GrowattShine2Mqtt"]
