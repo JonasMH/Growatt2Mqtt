@@ -50,7 +50,7 @@ public class GrowattSocketHandler
     private readonly ILogger<GrowattSocketHandler> _logger;
     private readonly IGrowattToMqttHandler _growattToMqttHandler;
     private readonly IGrowattTelegramParser _telegramParser;
-    private readonly IGrowattMetrics _metrics;
+    private readonly GrowattMetrics? _metrics;
     private readonly IClock _systemClock;
     private readonly IDateTimeZoneProvider _timeZoneProvider;
     private readonly IGrowattSocket _socket;
@@ -61,7 +61,7 @@ public class GrowattSocketHandler
         ILogger<GrowattSocketHandler> logger,
         IGrowattToMqttHandler growattToMqttHandler,
         IGrowattTelegramParser growattTelegramParser,
-        IGrowattMetrics metrics,
+        GrowattMetrics? metrics,
         IClock systemClock,
         IDateTimeZoneProvider timeZoneProvider,
         IGrowattSocket socket)
@@ -91,7 +91,7 @@ public class GrowattSocketHandler
             return;
         }
 
-        _metrics.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+        _metrics?.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
 
         switch (telegram)
         {
@@ -135,7 +135,7 @@ public class GrowattSocketHandler
     {
         var buffer = _telegramParser.PackMessage(telegram);
         _logger.LogDebug("Sending {telegramType}: 0x{telegramData}", telegram.GetType().Name, buffer.ToHex());
-        _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+        _metrics?.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
         await _socket.SendAsync(buffer);
     }
 
@@ -174,7 +174,7 @@ public class GrowattSocketHandler
 
 public static class DictionaryExtensions
 {
-    public static void AddOrUpdate<TKey, TValue>(this Dictionary<TKey, TValue> dic, TKey key, TValue value)
+    public static void AddOrUpdate<TKey, TValue>(this Dictionary<TKey, TValue> dic, TKey key, TValue value) where TKey : notnull
     {
         if(dic.ContainsKey(key))
         {

@@ -26,7 +26,7 @@ public class GrowattTelegramEncrypter : IGrowattTelegramEncrypter
         var unscrambled = new byte[dataLength];
 
         // Copy header
-        Array.Copy(buffer.Array, buffer.Offset, unscrambled, 0, 8);
+        Array.Copy(buffer.Array!, buffer.Offset, unscrambled, 0, 8);
 
         for (int i = 0; i < dataLength - 8; i++)
         {

@@ -4,7 +4,7 @@ public static class ByteArrayExtensions
 {
     public static string ToHex(this ArraySegment<byte> input)
     {
-        return BitConverter.ToString(input.Array, input.Offset, input.Count).Replace("-", "");
+        return BitConverter.ToString(input.Array!, input.Offset, input.Count).Replace("-", "");
     }
     public static string ToHex(this byte[] input)
     {

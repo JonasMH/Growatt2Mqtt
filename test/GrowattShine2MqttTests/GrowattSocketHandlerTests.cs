@@ -19,14 +19,6 @@ public class LoggerMock<T> : ILogger<T>
     }
 }
 
-public class GrowattMetricsMock : IGrowattMetrics
-{
-    public void ActiveConnections(int activeConnections) {}
-    public void MessageReceived(string messageType, int size) {}
-    public void MessageSent(string messageType, int size) {}
-    public void NewConnection() {}
-}
-
 public class GrowattToMqttHandlerMock : IGrowattToMqttHandler
 {
     public void NewDataTelegram(GrowattSPHData4Telegram data4Telegram){}
@@ -48,7 +40,7 @@ public class GrowattSocketHandlerTests
             new LoggerMock<GrowattSocketHandler>(),
             new GrowattToMqttHandlerMock(),
             new GrowattTelegramParser(new LoggerMock<GrowattTelegramParser>(), new GrowattTelegramEncrypter()),
-            new GrowattMetricsMock(),
+            null,
             systemClockMock,
             timeZoneProviderMock,
             _growattSocketMock);

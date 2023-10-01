@@ -17,10 +17,10 @@ public class GrowattServerOptions
 public class GrowattSocketReference
 {
     public int Id { get; set; }
-    public Socket Socket { get; set; }
-    public GrowattSocketHandler Handler { get; set; }
-    public CancellationTokenSource HandlerCancellationToken { get; set; }
-    public Task HandlerRunTask { get; set; }
+    public Socket Socket { get; set; } = null!;
+    public GrowattSocketHandler Handler { get; set; } = null!;
+    public CancellationTokenSource HandlerCancellationToken { get; set; } = null!;
+    public Task HandlerRunTask { get; set; } = null!;
 }
 
 public class GrowattServerListener : IHostedService, IGrowattServerListener
@@ -28,7 +28,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
     private readonly ILogger<GrowattServerListener> _logger;
     private readonly GrowattServerOptions _growattServerOptions;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IGrowattMetrics _metrics;
+    private readonly GrowattMetrics? _metrics;
     private readonly CancellationTokenSource _serviceRunningToken = new CancellationTokenSource();
     private TcpListener _listener;
     private Task? _cleanupTask;
@@ -42,7 +42,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
         ILogger<GrowattServerListener> logger,
         IOptions<GrowattServerOptions> growattServerOptions,
         IServiceProvider serviceProvider,
-        IGrowattMetrics metrics)
+        GrowattMetrics? metrics)
     {
         _logger = logger;
         _growattServerOptions = growattServerOptions.Value;
@@ -74,6 +74,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
                 _logger.LogInformation("Cleaning up socket {socketId} due to disconnect", disconnectedSocket.Id);
                 _socketRefs.Remove(disconnectedSocket);
                 disconnectedSocket.HandlerCancellationToken.Cancel();
+                disconnectedSocket.HandlerCancellationToken.Dispose();
                 disconnectedSocket.Socket.Dispose();
                 disconnectedSocket.HandlerRunTask.Dispose();
             }
@@ -88,6 +89,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
                 }
 
                 stoppedHandlerSocket.HandlerCancellationToken.Cancel();
+                stoppedHandlerSocket.HandlerCancellationToken.Dispose();
                 stoppedHandlerSocket.Socket.Dispose();
                 stoppedHandlerSocket.HandlerRunTask.Dispose();
 
@@ -97,7 +99,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
         {
             _logger.LogError(e, "Failed to clean up sockets");
         }
-        _metrics.ActiveConnections(_socketRefs.Count);
+        _metrics?.ActiveConnections(_socketRefs.Count);
     }
 
     private async Task ListenAsync()
@@ -110,7 +112,7 @@ public class GrowattServerListener : IHostedService, IGrowattServerListener
                 var socket = await _listener.AcceptSocketAsync();
                 var socketId = _socketIdCounter++;
                 _logger.LogInformation("Got connection from {endpoint} (SocketId {socketId})", socket.RemoteEndPoint, socketId);
-                _metrics.NewConnection();
+                _metrics?.NewConnection();
 
                 var handler = ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, (IGrowattSocket)(new GrowattSocket(socket, socketId)));
                 var socketRef = new GrowattSocketReference

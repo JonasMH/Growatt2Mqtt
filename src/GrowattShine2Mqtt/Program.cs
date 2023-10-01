@@ -3,22 +3,16 @@ using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Grpc;
 using MQTTnet.Client;
 using NodaTime;
-using Prometheus;
-using Serilog;
-using Serilog.Formatting.Compact;
+using OpenTelemetry.Metrics;
 using ToMqttNet;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-builder.Host.UseSerilog((options, loggerConf) =>
+builder.Logging.AddSimpleConsole(options =>
 {
-	loggerConf
-		.MinimumLevel.Debug()
-		.Enrich.FromLogContext()
-		.Enrich.WithThreadId()
-		.WriteTo.Console(new CompactJsonFormatter())
-		.ReadFrom.Configuration(options.Configuration);
+    options.IncludeScopes = true;
+    options.SingleLine = true;
+    options.TimestampFormat = "HH:mm:ss ";
 });
 
 var services = builder.Services;
@@ -26,7 +20,7 @@ var services = builder.Services;
 services.AddGrpc();
 services.AddGrpcReflection();
 services.AddHealthChecks();
-services.AddSingleton<IGrowattTopicHelper, GrowattTopicHelper>();
+services.AddSingleton<GrowattTopicHelper>();
 services.AddSingleton<IGrowattTelegramParser, GrowattTelegramParser>();
 
 services.AddSingleton<GrowattServerListener>();
@@ -82,28 +76,19 @@ services.AddMqttConnection(options =>
     options.ClientOptions.ChannelOptions = tcpOptions;
 });
 
-
-services.AddSingleton<CollectorRegistry>(x =>
-{
-	var registry = Metrics.NewCustomRegistry();
-
-	DotNetStats.Register(registry);
-
-	return registry;
-});
-
-services.AddSingleton<MetricFactory>(x =>
-{
-	var factory = Metrics.WithCustomRegistry(x.GetRequiredService<CollectorRegistry>());
-
-	return factory;
-});
+services.AddOpenTelemetry()
+    .WithMetrics(builder =>
+    {
+        builder.AddPrometheusExporter();
+        builder.AddMeter("GrowattShine2Mqtt");
+        builder.AddMeter("Microsoft.AspNetCore.Hosting",
+                         "Microsoft.AspNetCore.Server.Kestrel");
+    });
 
 
-services.AddOptions<GrowattServerOptions>()
-    .BindConfiguration(nameof(GrowattServerOptions));
+services.AddOptions<GrowattServerOptions>().BindConfiguration(nameof(GrowattServerOptions));
 
-services.AddSingleton<IGrowattMetrics, GrowattMetrics>();
+services.AddSingleton<GrowattMetrics>();
 services.AddSingleton<IGrowattTelegramEncrypter, GrowattTelegramEncrypter>();
 services.AddSingleton<NodaTime.IClock>(x => NodaTime.SystemClock.Instance);
 services.AddSingleton<NodaTime.IDateTimeZoneProvider>(x => DateTimeZoneProviders.Tzdb);
@@ -119,7 +104,7 @@ app.UseRouting();
 app.MapGrpcReflectionService();
 app.MapGrpcService<GrowattTestServiceImpl>();
 app.MapHealthChecks("/health");
-app.MapMetrics("/metrics", app.Services.GetRequiredService<CollectorRegistry>());
+app.MapPrometheusScrapingEndpoint("/metrics");
 
 app.Run();
 

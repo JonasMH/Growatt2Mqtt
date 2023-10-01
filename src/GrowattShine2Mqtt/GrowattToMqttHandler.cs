@@ -3,6 +3,7 @@ using ToMqttNet;
 using MQTTnet;
 using NodaTime;
 using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace GrowattShine2Mqtt;
 
@@ -68,13 +69,13 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 {
     private readonly ILogger<GrowattToMqttHandler> _logger;
     private readonly IMqttConnectionService _mqttConnection;
-    private readonly IGrowattTopicHelper _topicHelper;
+    private readonly GrowattTopicHelper _topicHelper;
     private readonly List<ToMqttNet.MqttDiscoveryConfig> _dicoveryConfigs = new();
 
     public GrowattToMqttHandler(
         ILogger<GrowattToMqttHandler> logger,
         IMqttConnectionService mqttConnection,
-        IGrowattTopicHelper topicHelper)
+        GrowattTopicHelper topicHelper)
     {
         _logger = logger;
         _mqttConnection = mqttConnection;
@@ -109,7 +110,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                 break;
         }
 
-        var statusPayload = _topicHelper.SerializePayload(new GrowattStatusPayload
+        var statusDto = new GrowattStatusPayload
         {
             Pv1Current = data4Telegram.Pv1current / 10f,
             Pv1Voltage = data4Telegram.Pv1voltage / 10f,
@@ -163,7 +164,9 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             OutputPriority = outputPriority,
 
             Timestamp = SystemClock.Instance.GetCurrentInstant().ToUnixTimeMilliseconds()
-        });
+        };
+
+        var statusPayload = JsonSerializer.Serialize(statusDto, GrowattMqttJsonSerializerContext.Default.GrowattStatusPayload);
 
         _mqttConnection.PublishAsync(
             new MqttApplicationMessageBuilder()
@@ -273,8 +276,10 @@ public class MqttSensorDiscoveryConfigBuilder
 {
     public MqttSensorDiscoveryConfig Config { get; }
 
-    public MqttSensorDiscoveryConfigBuilder(IGrowattTopicHelper topicHelper, string propertyName, string displayName, HomeAssistantUnits? unit, GrowattSPHData4Telegram data4Telegram)
+    public MqttSensorDiscoveryConfigBuilder(GrowattTopicHelper topicHelper, string propertyName, string displayName, HomeAssistantUnits? unit, GrowattSPHData4Telegram data4Telegram)
     {
+        var propertyNaming = GrowattMqttJsonSerializerContext.Default.Options.PropertyNamingPolicy!;
+
         Config = new MqttSensorDiscoveryConfig
         {
             Name = displayName,
@@ -297,7 +302,7 @@ public class MqttSensorDiscoveryConfigBuilder
                 }
             },
             StateTopic = topicHelper.GetDataPublishTopic(data4Telegram.Datalogserial),
-            ValueTemplate = $"{{{{ value_json.{topicHelper.GetPayloadPropertyName(propertyName)}}}}}",
+            ValueTemplate = $"{{{{ value_json.{propertyNaming.ConvertName(propertyName)}}}}}",
             UnitOfMeasurement = unit?.Value,
         };
     }

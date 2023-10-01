@@ -5,18 +5,25 @@ WORKDIR /app
 EXPOSE 5080
 EXPOSE 5000
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        clang \
+        gcc-aarch64-linux-gnu \
+        llvm \
+        zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
 COPY ["src/GrowattShine2Mqtt/GrowattShine2Mqtt.csproj", "src/GrowattShine2Mqtt/"]
-RUN dotnet restore "src/GrowattShine2Mqtt/GrowattShine2Mqtt.csproj"
+RUN dotnet restore -r linux-musl-x64 "src/GrowattShine2Mqtt/GrowattShine2Mqtt.csproj"
 COPY . .
 WORKDIR "/src/src/GrowattShine2Mqtt"
-RUN dotnet build "GrowattShine2Mqtt.csproj" -c Release -o /app/build
+RUN dotnet publish "GrowattShine2Mqtt.csproj" -r linux-musl-x64 --no-restore -c Release -o /app
+RUN rm /app/*.dbg /app/*.Development.json
 
-FROM build AS publish
-RUN dotnet publish "GrowattShine2Mqtt.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/nightly/runtime-deps:8.0-alpine-aot AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app .
 ENTRYPOINT ["dotnet", "GrowattShine2Mqtt.dll"]
