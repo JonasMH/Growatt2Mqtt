@@ -55,10 +55,10 @@ services.AddMqttConnection(options =>
         {
             UseTls = true,
             SslProtocol = System.Security.Authentication.SslProtocols.Tls12,
-            Certificates = new List<X509Certificate>()
+            ClientCertificatesProvider = new DefaultMqttCertificatesProvider(new List<X509Certificate>()
             {
                 clientCrt, caCrt
-            },
+            }),
             CertificateValidationHandler = (certContext) =>
             {
                 X509Chain chain = new X509Chain();
