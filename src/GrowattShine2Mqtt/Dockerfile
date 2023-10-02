@@ -5,16 +5,10 @@ WORKDIR /app
 EXPOSE 5080
 EXPOSE 5000
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        clang \
-        gcc-aarch64-linux-gnu \
-        llvm \
-        zlib1g-dev \
-    && rm -rf /var/lib/apt/lists/*
-
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+RUN apk add --upgrade --no-cache build-base clang zlib-dev grpc-plugins
+ENV PROTOBUF_PROTOC=/usr/bin/protoc
+ENV GRPC_PROTOC_PLUGIN=/usr/bin/grpc_csharp_plugin
 WORKDIR /src
 COPY ["src/GrowattShine2Mqtt/GrowattShine2Mqtt.csproj", "src/GrowattShine2Mqtt/"]
 RUN dotnet restore -r linux-musl-x64 "src/GrowattShine2Mqtt/GrowattShine2Mqtt.csproj"
@@ -26,4 +20,5 @@ RUN rm /app/*.dbg /app/*.Development.json
 FROM mcr.microsoft.com/dotnet/nightly/runtime-deps:8.0-alpine-aot AS final
 WORKDIR /app
 COPY --from=build /app .
+USER $APP_UID
 ENTRYPOINT ["./GrowattShine2Mqtt"]
