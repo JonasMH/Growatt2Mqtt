@@ -13,14 +13,14 @@ public class GrowattSPHData3Telegram : IGrowattTelegram
 
     public string Datalogserial { get; set; }
     public string Pvserial { get; set; }
-    public LocalDateTime? Date { get; set; }
+    //public LocalDateTime? Date { get; set; }
 
     public static GrowattSPHData3Telegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {
         return new GrowattByteDecoderBuilder<GrowattSPHData3Telegram>(new GrowattSPHData3Telegram(header), bytes)
             .ReadString(x => x.Datalogserial, 16 / 2, 10)
             .ReadString(x => x.Pvserial, 76 / 2, 10)
-            .ReadGrowattDateTime(x => x.Date, 136 / 2)
+            ///.ReadGrowattDateTime(x => x.Date, 136 / 2)
             .Result;
     }
 }

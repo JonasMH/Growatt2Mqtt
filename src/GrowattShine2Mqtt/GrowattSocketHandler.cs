@@ -113,7 +113,7 @@ public class GrowattSocketHandler
                 Info.InverterRegisterValues.AddOrUpdate(inverterQueryResponse.Register, inverterQueryResponse.Data);
                 break;
             case GrowattSPHData3Telegram data3Telegram:
-                _logger.LogInformation("Received data3 telegram from {date}, ACKing...", data3Telegram.Date);
+                _logger.LogInformation("Received data3 telegram from {serial}, ACKing...", data3Telegram.Datalogserial);
                 Info.DataloggerSerial = data3Telegram.Datalogserial;
 
                 await SendTelegramAsync(new GrowattSPHData3TelegramAck(telegram.Header));
@@ -156,15 +156,17 @@ public class GrowattSocketHandler
                 return;
             }
 
+            var received = new ArraySegment<byte>();
             try
             {
                 var amountReceived = await _socket.ReceiveAsync(buffer);
-                await HandleMessageAsync(new ArraySegment<byte>(buffer, 0, amountReceived));
+                received = new ArraySegment<byte>(buffer, 0, amountReceived);
+                await HandleMessageAsync(received);
 
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to handle socket {socketid}", _socket.SocketId);
+                _logger.LogError(e, "Failed to handle socket {socketid}. Data: {data}", _socket.SocketId, received.ToHex());
                 return;
             }
         }
