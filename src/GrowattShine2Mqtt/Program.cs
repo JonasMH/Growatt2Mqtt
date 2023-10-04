@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using GrowattShine2Mqtt;
 using GrowattShine2Mqtt.Grpc;
+using Microsoft.Extensions.Options;
 using MQTTnet.Client;
 using NodaTime;
 using OpenTelemetry.Metrics;
@@ -27,54 +28,55 @@ services.AddSingleton<GrowattServerListener>();
 services.AddSingleton<IGrowattServerListener>(x => x.GetRequiredService<GrowattServerListener>());
 services.AddHostedService(x => x.GetRequiredService<GrowattServerListener>());
 
-services.AddMqttConnection(options =>
-{
-	options.NodeId = "growatttomqtt";
-    var mqttConf = builder.Configuration.GetSection("MqttConnectionOptions");
-    var tcpOptions = new MqttClientTcpOptions
+builder.Services.AddMqttConnection()
+    .Configure<IOptions<MqttOptions>>((options, mqttConfI) =>
     {
-        Server = mqttConf["Server"],
-        Port = mqttConf.GetSection("Port")?.Get<int>(),
-    };
+        var mqttConf = mqttConfI.Value;
+        options.NodeId = "growatttomqtt";
 
-    var useTls = mqttConf.GetSection("UseTls")?.Get<bool>() ?? false;
-
-    if (useTls)
-    {
-        var caCrt = new X509Certificate2(mqttConf["CaCrt"]);
-        var clientCrt = X509Certificate2.CreateFromPemFile(mqttConf["ClientCrt"], mqttConf["ClientKey"]);
-
-
-        tcpOptions.TlsOptions = new MqttClientTlsOptions
+        builder.Configuration.GetSection("MqttConnectionOptions").Bind(mqttConf);
+        var tcpOptions = new MqttClientTcpOptions
         {
-            UseTls = true,
-            SslProtocol = System.Security.Authentication.SslProtocols.Tls12,
-            ClientCertificatesProvider = new DefaultMqttCertificatesProvider(new List<X509Certificate>()
+            Server = mqttConf.Server,
+            Port = mqttConf.Port,
+        };
+
+        if (mqttConf.UseTls)
+        {
+            var caCrt = new X509Certificate2(mqttConf.CaCrt);
+            var clientCrt = X509Certificate2.CreateFromPemFile(mqttConf.ClientCrt, mqttConf.ClientKey);
+
+
+            tcpOptions.TlsOptions = new MqttClientTlsOptions
+            {
+                UseTls = true,
+                SslProtocol = System.Security.Authentication.SslProtocols.Tls12,
+                ClientCertificatesProvider = new DefaultMqttCertificatesProvider(new List<X509Certificate>()
             {
                 clientCrt, caCrt
             }),
-            CertificateValidationHandler = (certContext) =>
-            {
-                X509Chain chain = new X509Chain();
-                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-                chain.ChainPolicy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
-                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
-                chain.ChainPolicy.VerificationTime = DateTime.Now;
-                chain.ChainPolicy.UrlRetrievalTimeout = new TimeSpan(0, 0, 0);
-                chain.ChainPolicy.CustomTrustStore.Add(caCrt);
-                chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                CertificateValidationHandler = (certContext) =>
+                {
+                    X509Chain chain = new X509Chain();
+                    chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                    chain.ChainPolicy.RevocationFlag = X509RevocationFlag.ExcludeRoot;
+                    chain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
+                    chain.ChainPolicy.VerificationTime = DateTime.Now;
+                    chain.ChainPolicy.UrlRetrievalTimeout = new TimeSpan(0, 0, 0);
+                    chain.ChainPolicy.CustomTrustStore.Add(caCrt);
+                    chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
 
-                // convert provided X509Certificate to X509Certificate2
-                var x5092 = new X509Certificate2(certContext.Certificate);
+                    // convert provided X509Certificate to X509Certificate2
+                    var x5092 = new X509Certificate2(certContext.Certificate);
 
-                return chain.Build(x5092);
-            }
-        };
-    }
+                    return chain.Build(x5092);
+                }
+            };
+        }
 
 
-    options.ClientOptions.ChannelOptions = tcpOptions;
-});
+        options.ClientOptions.ChannelOptions = tcpOptions;
+    });
 
 services.AddOpenTelemetry()
     .WithMetrics(builder =>

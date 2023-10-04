@@ -16,8 +16,8 @@
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.6.0-rc.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.6.0" />
     <PackageReference Include="NodaTime" Version="3.1.9" />
-		<PackageReference Include="ToMqttNet" Version="2.0.1" />
-    <PackageReference Include="Google.Protobuf" Version="3.24.3" />
+		<PackageReference Include="ToMqttNet" Version="2.1.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.24.4" />
     <PackageReference Include="Grpc.Net.Client" Version="2.57.0" />
     <PackageReference Include="Grpc.Tools" Version="2.58.0">
       <PrivateAssets>all</PrivateAssets>

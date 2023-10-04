@@ -2,8 +2,6 @@
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-preview AS base
 WORKDIR /app
-EXPOSE 5080
-EXPOSE 5000
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 RUN apk add --upgrade --no-cache build-base clang zlib-dev grpc-plugins
@@ -20,5 +18,7 @@ RUN rm /app/*.dbg /app/*.Development.json
 FROM mcr.microsoft.com/dotnet/nightly/runtime-deps:8.0-alpine-aot AS final
 WORKDIR /app
 COPY --from=build /app .
+EXPOSE 5080
+EXPOSE 5000
 USER $APP_UID
 ENTRYPOINT ["./GrowattShine2Mqtt"]
