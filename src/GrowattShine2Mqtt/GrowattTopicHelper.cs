@@ -38,7 +38,7 @@ public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
             return false;
         }
 
-        dataLogger = match.Groups[0].Value;
+        dataLogger = match.Groups[1].Value;
         return true;
     }
 }
