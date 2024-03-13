@@ -104,19 +104,13 @@ public class GrowattByteDecoder
     }
 }
 
-public class GrowattByteDecoderBuilder<T>
+public class GrowattByteDecoderBuilder<T>(T instance, ArraySegment<byte> buffer)
 {
-    private readonly T _instance;
-    private readonly ArraySegment<byte> _buffer;
-    private readonly GrowattByteDecoder _decoder = new GrowattByteDecoder();
+    private readonly T _instance = instance;
+    private readonly ArraySegment<byte> _buffer = buffer;
+    private readonly GrowattByteDecoder _decoder = new();
 
     public T Result => _instance;
-
-    public GrowattByteDecoderBuilder(T instance, ArraySegment<byte> buffer)
-    {
-        _instance = instance;
-        _buffer = buffer;
-    }
 
     public GrowattByteDecoderBuilder<T> ReadString(Expression<Func<T, string>> memberLamda, int pos, int length)
     {

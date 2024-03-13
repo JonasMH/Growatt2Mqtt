@@ -45,7 +45,7 @@ public class GrowattDataloggerCommandTelegram : IGrowattTelegram, ISerializeable
         buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16((ushort)Value.Length));
         buffer.AddRange(Value);
 
-        return buffer.ToArray();
+        return [.. buffer];
     }
 
     public static GrowattDataloggerCommandTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)

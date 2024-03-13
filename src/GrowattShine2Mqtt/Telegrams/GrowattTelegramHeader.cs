@@ -59,9 +59,9 @@ public class GrowattTelegramHeader
 
     public GrowattTelegramHeader()
     {
-        Bytes = new byte[8] {
+        Bytes = [
             0x00, 0x01, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00
-        };
+        ];
     }
     public GrowattTelegramHeader(byte[] bytes)
     {

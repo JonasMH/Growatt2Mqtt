@@ -13,16 +13,10 @@ public interface IGrowattSocket
     Task<int> ReceiveAsync(ArraySegment<byte> buffer);
 }
 
-public class GrowattSocket : IGrowattSocket
+public class GrowattSocket(Socket socket, int socketId) : IGrowattSocket
 {
-    private readonly Socket _socket;
-    private readonly int _socketId;
-
-    public GrowattSocket(Socket socket, int socketId)
-    {
-        _socket = socket;
-        _socketId = socketId;
-    }
+    private readonly Socket _socket = socket;
+    private readonly int _socketId = socketId;
 
     public int Available => _socket.Available;
     public int SocketId => _socketId;
@@ -41,39 +35,28 @@ public class GrowattSocket : IGrowattSocket
 
 public class GrowattDataloggerInformation {
     public string? DataloggerSerial { get; set; }
-    public Dictionary<ushort, byte[]> DataloggerRegisterValues { get; set; } = new();
-    public Dictionary<ushort, ushort> InverterRegisterValues { get; set; } = new();
+    public Dictionary<ushort, byte[]> DataloggerRegisterValues { get; set; } = [];
+    public Dictionary<ushort, ushort> InverterRegisterValues { get; set; } = [];
 }
 
-public class GrowattSocketHandler
+public class GrowattSocketHandler(
+    ILogger<GrowattSocketHandler> logger,
+    IGrowattToMqttHandler growattToMqttHandler,
+    IGrowattTelegramParser growattTelegramParser,
+    GrowattMetrics? metrics,
+    IClock systemClock,
+    IDateTimeZoneProvider timeZoneProvider,
+    IGrowattSocket socket)
 {
-    private readonly ILogger<GrowattSocketHandler> _logger;
-    private readonly IGrowattToMqttHandler _growattToMqttHandler;
-    private readonly IGrowattTelegramParser _telegramParser;
-    private readonly GrowattMetrics? _metrics;
-    private readonly IClock _systemClock;
-    private readonly IDateTimeZoneProvider _timeZoneProvider;
-    private readonly IGrowattSocket _socket;
+    private readonly ILogger<GrowattSocketHandler> _logger = logger;
+    private readonly IGrowattToMqttHandler _growattToMqttHandler = growattToMqttHandler;
+    private readonly IGrowattTelegramParser _telegramParser = growattTelegramParser;
+    private readonly GrowattMetrics? _metrics = metrics;
+    private readonly IClock _systemClock = systemClock;
+    private readonly IDateTimeZoneProvider _timeZoneProvider = timeZoneProvider;
+    private readonly IGrowattSocket _socket = socket;
 
     public GrowattDataloggerInformation Info { get; } = new();
-
-    public GrowattSocketHandler(
-        ILogger<GrowattSocketHandler> logger,
-        IGrowattToMqttHandler growattToMqttHandler,
-        IGrowattTelegramParser growattTelegramParser,
-        GrowattMetrics? metrics,
-        IClock systemClock,
-        IDateTimeZoneProvider timeZoneProvider,
-        IGrowattSocket socket)
-    {
-        _logger = logger;
-        _growattToMqttHandler = growattToMqttHandler;
-        _telegramParser = growattTelegramParser;
-        _metrics = metrics;
-        _systemClock = systemClock;
-        _timeZoneProvider = timeZoneProvider;
-        _socket = socket;
-    }
 
     public async Task HandleMessageAsync(ArraySegment<byte> buffer)
     {
@@ -142,7 +125,7 @@ public class GrowattSocketHandler
     public async Task RunAsync(CancellationToken token)
     {
         byte[] buffer = new byte[1024 * 8];
-        while (!token.IsCancellationRequested)
+        while (!token.IsCancellationRequested && _socket.Connected)
         {
             if (_socket.Available <= 0)
             {
@@ -152,7 +135,7 @@ public class GrowattSocketHandler
 
             if(!_socket.Connected)
             {
-                _logger.LogInformation("Socket {socketid} no longer connected", _socket.SocketId);
+                _logger.LogInformation("Socket {socketId} no longer connected", _socket.SocketId);
                 return;
             }
 

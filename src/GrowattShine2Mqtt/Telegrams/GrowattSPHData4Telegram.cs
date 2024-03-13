@@ -2,14 +2,9 @@
 
 namespace GrowattShine2Mqtt.Telegrams;
 
-public class GrowattSPHData4Telegram : IGrowattTelegram
+public class GrowattSPHData4Telegram(GrowattTelegramHeader header) : IGrowattTelegram
 {
-    public GrowattSPHData4Telegram(GrowattTelegramHeader header)
-    {
-        Header = header;
-    }
-
-    public GrowattTelegramHeader Header { get; set; }
+    public GrowattTelegramHeader Header { get; set; } = header;
 
     public string Datalogserial { get; set; }
     public string Pvserial { get; set; }
@@ -190,23 +185,18 @@ public class GrowattSPHData4Telegram : IGrowattTelegram
             .Result;
     }
 }
-public class GrowattSPHData4TelegramAck : IGrowattTelegram, ISerializeableGrowattTelegram
+public class GrowattSPHData4TelegramAck(GrowattTelegramHeader header) : IGrowattTelegram, ISerializeableGrowattTelegram
 {
-    public GrowattSPHData4TelegramAck(GrowattTelegramHeader header)
-    {
-        Header = header;
-    }
-
-    public GrowattTelegramHeader Header { get; set; }
+    public GrowattTelegramHeader Header { get; set; } = header;
 
     public byte[] ToBytes()
     {
         var buffer = new List<byte>();
 
         buffer.AddRange(Header.Bytes[0..4]); // ??
-        buffer.AddRange(new byte[] { 0x00, 0x00 }); // Make space for length
+        buffer.AddRange([0x00, 0x00]); // Make space for length
         buffer.AddRange(Header.Bytes[6..8]); // Add message type
         buffer.Add(0x00); // Add magic
-        return buffer.ToArray();
+        return [.. buffer];
     }
 }

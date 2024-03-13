@@ -40,7 +40,7 @@ public class GrowattInverterCommandTelegram : IGrowattTelegram, ISerializeableGr
         buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16(Register));
         buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16(Value));
 
-        return buffer.ToArray();
+        return [.. buffer];
     }
 
 
@@ -55,14 +55,9 @@ public class GrowattInverterCommandTelegram : IGrowattTelegram, ISerializeableGr
     }
 }
 
-public class GrowattInverterCommandResponseTelegram : IGrowattTelegram
+public class GrowattInverterCommandResponseTelegram(GrowattTelegramHeader header) : IGrowattTelegram
 {
-    public GrowattInverterCommandResponseTelegram(GrowattTelegramHeader header)
-    {
-        Header = header;
-    }
-
-    public GrowattTelegramHeader Header { get; set; }
+    public GrowattTelegramHeader Header { get; set; } = header;
 
     public string DataloggerId { get; set; }
     public byte Result { get; set; }

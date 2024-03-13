@@ -21,7 +21,7 @@ public class GrowattTelegramEncrypterTest {
 
         var expected = "309c236a6db2265a0bf2110769743147723f776b7474b9745936a1dc70a3b2c77749622c53ed6f7778e262118565277962a4ece46f7761777441724f767779566b324f3727034062050e0315330628050e0315330628050e031533066630";
 
-        Assert.Equal(expected, BitConverter.ToString(result.ToArray()).Replace("-", ""), ignoreCase: true);
+        Assert.Equal(expected, BitConverter.ToString([.. result]).Replace("-", ""), ignoreCase: true);
     }
 
 

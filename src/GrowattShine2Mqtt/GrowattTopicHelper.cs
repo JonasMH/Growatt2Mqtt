@@ -1,26 +1,12 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using ToMqttNet;
 
 namespace GrowattShine2Mqtt;
 
-[JsonSerializable(typeof(GrowattStatusPayload))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase
-//    ,Converters = new[] { typeof(NodaTimeInstantConverter) }
-)]
-public partial class GrowattMqttJsonSerializerContext : JsonSerializerContext
+public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
 {
-
-}
-
-public class GrowattTopicHelper
-{
-    private readonly IMqttConnectionService _mqttConnection;
-
-    public GrowattTopicHelper(IMqttConnectionService mqttConnection)
-    {
-        _mqttConnection = mqttConnection;
-    }
+    private readonly IMqttConnectionService _mqttConnection = mqttConnection;
 
     public string GetConnectedTopic()
     {
@@ -29,6 +15,30 @@ public class GrowattTopicHelper
 
     public string GetDataPublishTopic(string dataLogger)
     {
-        return $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}";
+        return $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/data";
+    }
+
+    public string GetInverterRegistryStatus(string dataLogger)
+    {
+        return $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/inverter-registers";
+    }
+
+    public string BatteryFirstModeTopic(string dataLogger)
+    {
+        return $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first";
+    }
+
+    public bool TryParseBatteryFirstModeTopic(string topic, out string dataLogger)
+    {
+        var regex = new Regex(@$"{_mqttConnection.MqttOptions.NodeId}/write/([A-z]+)/battery-first");
+        var match = regex.Match(topic);
+
+        if( !match.Success ) {
+            dataLogger = "";
+            return false;
+        }
+
+        dataLogger = match.Groups[0].Value;
+        return true;
     }
 }

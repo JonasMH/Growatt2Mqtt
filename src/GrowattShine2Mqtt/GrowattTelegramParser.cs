@@ -37,17 +37,10 @@ public class GrowattTelegramEncrypter : IGrowattTelegramEncrypter
     }
 }
 
-public class GrowattTelegramParser : IGrowattTelegramParser
+public class GrowattTelegramParser(ILogger<GrowattTelegramParser> logger, IGrowattTelegramEncrypter encrypter) : IGrowattTelegramParser
 {
-    private readonly ILogger<GrowattTelegramParser> _logger;
-    private readonly IGrowattTelegramEncrypter _encrypter;
-
-    public GrowattTelegramParser(ILogger<GrowattTelegramParser> logger, IGrowattTelegramEncrypter encrypter)
-    {
-        _logger = logger;
-        _encrypter = encrypter;
-    }
-
+    private readonly ILogger<GrowattTelegramParser> _logger = logger;
+    private readonly IGrowattTelegramEncrypter _encrypter = encrypter;
 
     public ArraySegment<byte> PackMessage(ISerializeableGrowattTelegram telegram)
     {

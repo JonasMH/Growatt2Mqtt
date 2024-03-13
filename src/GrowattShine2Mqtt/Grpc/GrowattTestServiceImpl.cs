@@ -5,21 +5,15 @@ using Grpc.Core;
 
 namespace GrowattShine2Mqtt.Grpc;
 
-public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
+public class GrowattTestServiceImpl(ILogger<GrowattTestServiceImpl> logger, GrowattServerListener serverListener) : GrowattTestService.GrowattTestServiceBase
 {
-    private readonly ILogger<GrowattTestServiceImpl> _logger;
-    private readonly IGrowattServerListener _serverListener;
-
-    public GrowattTestServiceImpl(ILogger<GrowattTestServiceImpl> logger, IGrowattServerListener serverListener)
-    {
-        _logger = logger;
-        _serverListener = serverListener;
-    }
+    private readonly ILogger<GrowattTestServiceImpl> _logger = logger;
+    private readonly GrowattServerListener _serverListener = serverListener;
 
     public override async Task<CommandDataLoggerResponse> CommandDatalogger(CommandDataLoggerRequest request, ServerCallContext context)
     {
         _logger.LogInformation("Commanding datalogger");
-        var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
+        var loggerSocket = _serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if(loggerSocket == null)
         {
@@ -44,7 +38,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
     public override async Task<CommandInverterResponse> CommandInverter(CommandInverterRequest request, ServerCallContext context)
     {
         _logger.LogInformation("Commanding inverter");
-        var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
+        var loggerSocket = _serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
         {
@@ -67,15 +61,16 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
 
     public override Task<GetDataLoggerInfoResponse> GetDataLoggerInfo(GetDataLoggerInfoRequest request, ServerCallContext context)
     {
-        var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
+        var loggerSocket = _serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
         {
             throw new RpcException(new Status(StatusCode.NotFound, $"Datalogger {request.Datalogger} wasn't found"));
         }
-        var response = new GetDataLoggerInfoResponse();
-
-        response.Datalogger = request.Datalogger;
+        var response = new GetDataLoggerInfoResponse
+        {
+            Datalogger = request.Datalogger
+        };
 
         foreach (var dataloggerRegister in loggerSocket.Info.DataloggerRegisterValues)
         {
@@ -95,14 +90,14 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
     {
         var response = new ListDataloggersResponse();
 
-        response.Dataloggers.AddRange(_serverListener.Sockets.Select(x => x.Info.DataloggerSerial));
+        response.Dataloggers.AddRange(_serverListener.Sockets.Select(x => x.Value.Info.DataloggerSerial));
 
         return Task.FromResult(response);
     }
 
     public override async Task<QueryDataLoggerResponse> QueryDatalogger(QueryDataLoggerRequest request, ServerCallContext context)
     {
-        var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
+        var loggerSocket = _serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
         {
@@ -126,7 +121,7 @@ public class GrowattTestServiceImpl : GrowattTestService.GrowattTestServiceBase
     public override async Task<QueryInverterResponse> QueryInverter(QueryInverterRequest request, ServerCallContext context)
     {
         _logger.LogInformation("Query inverter");
-        var loggerSocket = _serverListener.Sockets.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
+        var loggerSocket = _serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial == request.Datalogger);
 
         if (loggerSocket == null)
         {

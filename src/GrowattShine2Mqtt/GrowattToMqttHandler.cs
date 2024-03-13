@@ -2,8 +2,11 @@
 using ToMqttNet;
 using MQTTnet;
 using NodaTime;
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using HomeAssistantDiscoveryNet;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using MQTTnet.Client;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GrowattShine2Mqtt;
 
@@ -12,84 +15,148 @@ public interface IGrowattToMqttHandler
     void NewDataTelegram(GrowattSPHData4Telegram data4Telegram);
 }
 
-
-public class GrowattStatusPayload
+public class GrowattToMqttHandler(
+    ILogger<GrowattToMqttHandler> logger,
+    IMqttConnectionService mqttConnection,
+    GrowattTopicHelper topicHelper,
+    GrowattServerListener serverListener) : IHostedService, IGrowattToMqttHandler
 {
-    public short Pvstatus { get; set; }
-    public float Pvpowerin { get; set; }
-    public float Pv1Voltage { get; set; }
-    public float Pv1Current { get; set; }
-    public float Pv1Watt { get; set; }
-    public float Pv2Voltage { get; set; }
-    public float Pv2Current { get; set; }
-    public float Pv2Watt { get; set; }
-    public float Pvpowerout { get; set; }
-    public float Pvfrequentie { get; set; }
-    public float Pvgridvoltage { get; set; }
-    public float Pvgridcurrent { get; set; }
-    public int Pvgridpower { get; set; }
-    public float Pvgridvoltage2 { get; set; }
-    public float Pvgridcurrent2 { get; set; }
-    public int Pvgridpower2 { get; set; }
-    public float Pvgridvoltage3 { get; set; }
-    public float Pvgridcurrent3 { get; set; }
-    public int Pvgridpower3 { get; set; }
-    public float Eactoday { get; set; }
-    public float Pvenergytoday { get; set; }
-    public float Pdischarge1 { get; set; }
-    public float P1charge1 { get; set; }
-    public float Vbat { get; set; }
-    public short StateOfCharge { get; set; }
-    public float Pactousertot { get; set; }
-    public float Pactogridtot { get; set; }
-    public float BatteryTemperature { get; set; }
-    public float Pvtemperature { get; set; }
+    private readonly ILogger<GrowattToMqttHandler> _logger = logger;
+    private readonly IMqttConnectionService _mqttConnection = mqttConnection;
+    private readonly GrowattTopicHelper _topicHelper = topicHelper;
+    private readonly List<MqttDiscoveryConfig> _dicoveryConfigs = [];
+    private Timer? _registerReaderTimer;
 
-    [JsonPropertyName("ts")]
-    public long Timestamp { get; set; }
-    public float Eacharge_today { get; set; }
-    public float Eacharge_total { get; set; }
-    public float Edischarge1_tod { get; set; }
-    public float Edischarge1_total { get; set; }
-    public float Elocalload_tod { get; set; }
-    public float Elocalload_tot { get; set; }
-    public float Plocaloadtot { get; set; }
-    public float Etouser_tod { get; internal set; }
-    public float Etouser_tot { get; internal set; }
-    public float Eactotal { get; internal set; }
-    public string OutputPriority { get; internal set; }
-    public float Epvtotal { get; internal set; }
-    public float Eharge1_tod { get; internal set; }
-    public float Eharge1_tot { get; internal set; }
-    public float Etogrid_tod { get; internal set; }
-    public float Etogrid_tot { get; internal set; }
-}
-
-public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
-{
-    private readonly ILogger<GrowattToMqttHandler> _logger;
-    private readonly IMqttConnectionService _mqttConnection;
-    private readonly GrowattTopicHelper _topicHelper;
-    private readonly List<ToMqttNet.MqttDiscoveryConfig> _dicoveryConfigs = new();
-
-    public GrowattToMqttHandler(
-        ILogger<GrowattToMqttHandler> logger,
-        IMqttConnectionService mqttConnection,
-        GrowattTopicHelper topicHelper)
-    {
-        _logger = logger;
-        _mqttConnection = mqttConnection;
-        _topicHelper = topicHelper;
-    }
-
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting {hostedService}", GetType().Name);
 
         _mqttConnection.OnConnect += (sender, args) => PublishConfigs();
+        _mqttConnection.OnApplicationMessageReceived += async (sender, args) =>
+        {
+            try
+            {
+                await MessageReceivedAsync(sender, args);
+            } catch(Exception e)
+            {
+                _logger.LogWarning(e, "Failed to handle message to topic {topic}", args.ApplicationMessage.Topic);
+            }
+        };
+
+        await _mqttConnection.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(_topicHelper.BatteryFirstModeTopic("+")).Build());
+
+        _registerReaderTimer = new Timer(async (state) => await ReadRegistersAsync(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
 
         _logger.LogInformation("Started {hostedService}", GetType().Name);
-        return Task.CompletedTask;
+    }
+
+    private async Task MessageReceivedAsync(object? sender, MqttApplicationMessageReceivedEventArgs args)
+    {
+        var topic = args.ApplicationMessage.Topic;
+        var content = args.ApplicationMessage.ConvertPayloadToString();
+
+        if (_topicHelper.TryParseBatteryFirstModeTopic(topic, out var datalogger))
+        {
+            if(content == "false")
+            {
+                await SetBatteryFirstAsync(datalogger, false);
+            } else if (content == "true")
+            {
+                await SetBatteryFirstAsync(datalogger, true);
+            } else
+            {
+                _logger.LogWarning("Received invalid battery mode. {topic}: {content}", topic, content);
+            }
+        } else
+        {
+            _logger.LogInformation("Received message with unmatched topic {topic}", topic);
+        }
+    }
+
+    public async Task ReadRegistersAsync()
+    {
+        var interestingRegisters = new ushort[] { 1044 };
+        _logger.LogInformation("Reading registers");
+
+        try
+        {
+            foreach (var item in interestingRegisters)
+            {
+                foreach (var dataLogger in serverListener.Sockets)
+                {
+                    if(dataLogger.Value.Info.DataloggerSerial == null)
+                    {
+                        continue;
+                    }
+
+                    var telegram = new GrowattDataloggerQueryTelegram()
+                    {
+                        LoggerId = dataLogger.Value.Info.DataloggerSerial,
+                        StartAddress = (ushort)item,
+                        EndAddress = (ushort)item
+                    };
+                    await dataLogger.Value.SendTelegramAsync(telegram);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+
+            foreach (var dataLogger in serverListener.Sockets)
+            {
+                if (dataLogger.Value.Info.DataloggerSerial == null)
+                {
+                    continue;
+                }
+
+                var statusPayload = JsonSerializer.Serialize(dataLogger.Value.Info.InverterRegisterValues, GrowattMqttJsonSerializerContext.Default.DictionaryUInt16UInt16);
+
+                _logger.LogInformation("Publishing registers");
+                await _mqttConnection.PublishAsync(
+                    new MqttApplicationMessageBuilder()
+                    .WithTopic(_topicHelper.GetInverterRegistryStatus(dataLogger.Value.Info.DataloggerSerial))
+                    .WithPayload(statusPayload)
+                    .Build());
+            }
+
+        } catch(Exception e)
+        {
+            _logger.LogError(e, "Failed to query registers");
+        }
+    }
+
+    public async Task SetBatteryFirstAsync(string datalogger, bool mode)
+    {
+        _logger.LogInformation("Setting battery first mode to {value} on {datalogger}", mode, datalogger);
+        var loggerSocket = serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial?.ToLower() == datalogger?.ToLower());
+        if(loggerSocket == null)
+        {
+            _logger.LogWarning("Failed to find datalogger socket for {datalogger}", datalogger);
+            return;
+        }
+
+        var telegram = new GrowattInverterCommandTelegram()
+        {
+            DataloggerId = datalogger,
+            Register = 1102, // Is battery-first mode is enable
+            Value = mode ? (ushort)1 : (ushort)0 // 1 = true, 0 = false
+        };
+        await loggerSocket.SendTelegramAsync(telegram);
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        telegram = new GrowattInverterCommandTelegram()
+        {
+            DataloggerId = datalogger,
+            Register = 1100, // When to start mode
+            Value = 0, // 00:00
+        };
+        await loggerSocket.SendTelegramAsync(telegram);
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        telegram = new GrowattInverterCommandTelegram()
+        {
+            DataloggerId = datalogger,
+            Register = 1101, // When end start mode
+            Value = 5947 // 23:59
+        };
+        await loggerSocket.SendTelegramAsync(telegram);
     }
 
     public void NewDataTelegram(GrowattSPHData4Telegram data4Telegram)
@@ -244,6 +311,38 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         _dicoveryConfigs.Add(new MqttSensorDiscoveryConfigBuilder(_topicHelper, nameof(GrowattStatusPayload.Edischarge1_tod), "Batter Discharge Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram).Config);
         _dicoveryConfigs.Add(new MqttSensorDiscoveryConfigBuilder(_topicHelper, nameof(GrowattStatusPayload.Edischarge1_total), "Batter Discharge Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram).SetStateClass(MqttDiscoveryStateClass.TotalIncreasing).SetDeviceClass(HomeAssistantDeviceClass.ENERGY).SetLastReset(lastReset).Config);
 
+        // Commands
+        _dicoveryConfigs.Add(new MqttButtonDiscoveryConfig()
+        {
+            Name = "Enable Battery First",
+            UniqueId = data4Telegram.Datalogserial.ToLower() + "_enablebatteryfirst",
+            Device = new MqttDiscoveryDevice
+            {
+                Name = "Growatt Shine " + data4Telegram.Datalogserial,
+                Identifiers =
+                [
+                    data4Telegram.Datalogserial
+                ]
+            },
+            CommandTopic = _topicHelper.BatteryFirstModeTopic(data4Telegram.Datalogserial),
+            CommandTemplate = "true"
+        });
+        _dicoveryConfigs.Add(new MqttButtonDiscoveryConfig()
+        {
+            Name = "Disable Battery First",
+            UniqueId = data4Telegram.Datalogserial.ToLower() + "_disablebatteryfirst",
+            Device = new MqttDiscoveryDevice
+            {
+                Name = "Growatt Shine " + data4Telegram.Datalogserial,
+                Identifiers =
+                [
+                    data4Telegram.Datalogserial
+                ]
+            },
+            CommandTopic = _topicHelper.BatteryFirstModeTopic(data4Telegram.Datalogserial),
+            CommandTemplate = "false"
+        });
+
         PublishConfigs();
     }
 
@@ -287,20 +386,20 @@ public class MqttSensorDiscoveryConfigBuilder
             Device = new MqttDiscoveryDevice
             {
                 Name = "Growatt Shine " + data4Telegram.Datalogserial,
-                Identifiers = new List<string>
-                {
+                Identifiers =
+                [
                     data4Telegram.Datalogserial
-                }
+                ]
             },
-            Availability = new List<MqttDiscoveryAvailablilty>
-            {
-                new MqttDiscoveryAvailablilty()
+            Availability =
+            [
+                new()
                 {
                     Topic = topicHelper.GetConnectedTopic(),
                     PayloadAvailable = "2",
                     PayloadNotAvailable = "0"
                 }
-            },
+            ],
             StateTopic = topicHelper.GetDataPublishTopic(data4Telegram.Datalogserial),
             ValueTemplate = $"{{{{ value_json.{propertyNaming.ConvertName(propertyName)}}}}}",
             UnitOfMeasurement = unit?.Value,

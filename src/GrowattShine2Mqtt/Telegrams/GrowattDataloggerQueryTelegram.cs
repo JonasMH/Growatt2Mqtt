@@ -29,20 +29,15 @@ public class GrowattDataloggerQueryTelegram : IGrowattTelegram, ISerializeableGr
         buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16(StartAddress));
         buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16(EndAddress));
 
-        return buffer.ToArray();
+        return [.. buffer];
     }
 
 
 }
 
-public class GrowattDataloggerQueryResponseTelegram : IGrowattTelegram
+public class GrowattDataloggerQueryResponseTelegram(GrowattTelegramHeader header) : IGrowattTelegram
 {
-    public GrowattDataloggerQueryResponseTelegram(GrowattTelegramHeader header)
-    {
-        Header = header;
-    }
-
-    public GrowattTelegramHeader Header { get; set; }
+    public GrowattTelegramHeader Header { get; set; } = header;
 
     public string Datalogserial { get; set; }
     public ushort Register { get; set; }

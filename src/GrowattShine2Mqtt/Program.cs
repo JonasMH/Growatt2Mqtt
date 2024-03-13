@@ -25,7 +25,6 @@ services.AddSingleton<GrowattTopicHelper>();
 services.AddSingleton<IGrowattTelegramParser, GrowattTelegramParser>();
 
 services.AddSingleton<GrowattServerListener>();
-services.AddSingleton<IGrowattServerListener>(x => x.GetRequiredService<GrowattServerListener>());
 services.AddHostedService(x => x.GetRequiredService<GrowattServerListener>());
 
 builder.Services.AddMqttConnection()

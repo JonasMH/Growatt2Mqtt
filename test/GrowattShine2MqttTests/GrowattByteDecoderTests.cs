@@ -4,7 +4,7 @@ using NodaTime;
 namespace GrowattShine2MqttTests;
 public class GrowattByteDecoderTests
 {
-    private GrowattByteDecoder _sut = new();
+    private readonly GrowattByteDecoder _sut = new();
 
 
     [Fact]

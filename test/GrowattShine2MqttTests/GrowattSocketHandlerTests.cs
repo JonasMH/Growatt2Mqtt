@@ -160,7 +160,7 @@ public class GrowattSocketHandlerTests
         public int SocketId => 1337;
         public bool Connected => true;
 
-        public List<ArraySegment<byte>> Sends = new List<ArraySegment<byte>>();
+        public List<ArraySegment<byte>> Sends = [];
 
         public Task<int> ReceiveAsync(ArraySegment<byte> buffer)
         {

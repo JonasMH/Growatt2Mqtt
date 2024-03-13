@@ -1,13 +1,8 @@
 ﻿namespace GrowattShine2Mqtt.Telegrams;
 
-public class GrowattSPHPingTelegram : IGrowattTelegram
+public class GrowattSPHPingTelegram(GrowattTelegramHeader header) : IGrowattTelegram
 {
-    public GrowattSPHPingTelegram(GrowattTelegramHeader header)
-    {
-        Header = header;
-    }
-
-    public GrowattTelegramHeader Header { get; set; }
+    public GrowattTelegramHeader Header { get; set; } = header;
 
     public string DataLoggerId { get; set; }
 
