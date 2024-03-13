@@ -30,7 +30,7 @@ public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
 
     public bool TryParseBatteryFirstModeTopic(string topic, out string dataLogger)
     {
-        var regex = new Regex(@$"{_mqttConnection.MqttOptions.NodeId}/write/([A-z]+)/battery-first");
+        var regex = new Regex(@$"{_mqttConnection.MqttOptions.NodeId}/write/([A-z0-9]+)/battery-first");
         var match = regex.Match(topic);
 
         if( !match.Success ) {
