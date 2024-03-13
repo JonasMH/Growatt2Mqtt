@@ -141,7 +141,7 @@ public class GrowattToMqttHandler(
             Value = mode ? (ushort)1 : (ushort)0 // 1 = true, 0 = false
         };
         await loggerSocket.SendTelegramAsync(telegram);
-        await Task.Delay(TimeSpan.FromSeconds(1));
+        await Task.Delay(TimeSpan.FromSeconds(2));
         telegram = new GrowattInverterCommandTelegram()
         {
             DataloggerId = loggerSocket.Info.DataloggerSerial!,
@@ -149,7 +149,7 @@ public class GrowattToMqttHandler(
             Value = 0, // 00:00
         };
         await loggerSocket.SendTelegramAsync(telegram);
-        await Task.Delay(TimeSpan.FromSeconds(1));
+        await Task.Delay(TimeSpan.FromSeconds(2));
         telegram = new GrowattInverterCommandTelegram()
         {
             DataloggerId = loggerSocket.Info.DataloggerSerial!,

@@ -88,11 +88,11 @@ public class GrowattSocketHandler(
                 Info.DataloggerRegisterValues.AddOrUpdate(cmdResponseTelegram.Register, cmdResponseTelegram.Data);
                 break;
             case GrowattInverterCommandResponseTelegram inverterCommandResponse:
-                _logger.LogInformation("Inverter register (Result={result}) {register}={data}/{dataHex}", inverterCommandResponse.Result, inverterCommandResponse.Register, inverterCommandResponse.Data, inverterCommandResponse.Data.ToHex());
+                _logger.LogInformation("Inverter register (Result={result}) {register}=0x{dataHex} ({data})", inverterCommandResponse.Result, inverterCommandResponse.Register, inverterCommandResponse.Data.ToHex(), inverterCommandResponse.Data);
                 Info.InverterRegisterValues.AddOrUpdate(inverterCommandResponse.Register, inverterCommandResponse.Data);
                 break;
             case GrowattInverterQueryResponseTelegram inverterQueryResponse:
-                _logger.LogInformation("Inverter register {register}={data}/{dataHex}", inverterQueryResponse.Register, inverterQueryResponse.Data, inverterQueryResponse.Data.ToHex());
+                _logger.LogInformation("Inverter register {register}=0x{dataHex} ({data})", inverterQueryResponse.Register, inverterQueryResponse.Data.ToHex(), inverterQueryResponse.Data);
                 Info.InverterRegisterValues.AddOrUpdate(inverterQueryResponse.Register, inverterQueryResponse.Data);
                 break;
             case GrowattSPHData3Telegram data3Telegram:
