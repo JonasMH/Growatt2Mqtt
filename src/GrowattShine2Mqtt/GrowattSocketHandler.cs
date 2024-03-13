@@ -117,7 +117,15 @@ public class GrowattSocketHandler(
     public async Task SendTelegramAsync(ISerializeableGrowattTelegram telegram)
     {
         var buffer = _telegramParser.PackMessage(telegram);
-        _logger.LogDebug("Sending {telegramType}: 0x{telegramData}", telegram.GetType().Name, buffer.ToHex());
+
+        if(_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Sending {telegramType}: 0x{telegramData}", telegram.GetType().Name, buffer.ToHex());
+        } else
+        {
+            _logger.LogInformation("Sending {telegramType}: {content}", telegram.GetType().Name, telegram.ToString());
+        }
+
         _metrics?.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
         await _socket.SendAsync(buffer);
     }

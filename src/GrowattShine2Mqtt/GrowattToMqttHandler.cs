@@ -89,9 +89,9 @@ public class GrowattToMqttHandler(
                         continue;
                     }
 
-                    var telegram = new GrowattDataloggerQueryTelegram()
+                    var telegram = new GrowattInverterQueryTelegram()
                     {
-                        LoggerId = dataLogger.Value.Info.DataloggerSerial,
+                        DataloggerId = dataLogger.Value.Info.DataloggerSerial,
                         StartAddress = (ushort)item,
                         EndAddress = (ushort)item
                     };
@@ -130,13 +130,13 @@ public class GrowattToMqttHandler(
         var loggerSocket = serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial?.ToLower() == datalogger?.ToLower());
         if(loggerSocket == null)
         {
-            _logger.LogWarning("Failed to find datalogger socket for {datalogger}", datalogger);
+            _logger.LogWarning("Failed to find datalogger socket for {datalogger}", loggerSocket!.Info.DataloggerSerial);
             return;
         }
 
         var telegram = new GrowattInverterCommandTelegram()
         {
-            DataloggerId = datalogger,
+            DataloggerId = loggerSocket.Info.DataloggerSerial!,
             Register = 1102, // Is battery-first mode is enable
             Value = mode ? (ushort)1 : (ushort)0 // 1 = true, 0 = false
         };
@@ -144,7 +144,7 @@ public class GrowattToMqttHandler(
         await Task.Delay(TimeSpan.FromSeconds(1));
         telegram = new GrowattInverterCommandTelegram()
         {
-            DataloggerId = datalogger,
+            DataloggerId = loggerSocket.Info.DataloggerSerial!,
             Register = 1100, // When to start mode
             Value = 0, // 00:00
         };
@@ -152,7 +152,7 @@ public class GrowattToMqttHandler(
         await Task.Delay(TimeSpan.FromSeconds(1));
         telegram = new GrowattInverterCommandTelegram()
         {
-            DataloggerId = datalogger,
+            DataloggerId = loggerSocket.Info.DataloggerSerial!,
             Register = 1101, // When end start mode
             Value = 5947 // 23:59
         };

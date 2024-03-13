@@ -31,8 +31,6 @@ public class GrowattDataloggerQueryTelegram : IGrowattTelegram, ISerializeableGr
 
         return [.. buffer];
     }
-
-
 }
 
 public class GrowattDataloggerQueryResponseTelegram(GrowattTelegramHeader header) : IGrowattTelegram
