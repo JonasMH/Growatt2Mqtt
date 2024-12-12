@@ -79,8 +79,6 @@ public class GrowattServerListener(
                 _serviceProvider.GetRequiredService<IClock>(),
                 _serviceProvider.GetRequiredService<IDateTimeZoneProvider>(),
                 socketInfo);
-
-                ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, socketInfo);
             _socketRefs.Add(socketId, handler);
             await handler.RunAsync(_serviceRunningToken.Token);
         } catch(Exception e)
