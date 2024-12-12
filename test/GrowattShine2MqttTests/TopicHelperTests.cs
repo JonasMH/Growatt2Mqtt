@@ -8,14 +8,13 @@ namespace GrowattShine2MqttTests;
 
 public class MqttConnectionServiceMock : IMqttConnectionService
 {
-    public MqttConnectionOptions MqttOptions => new MqttConnectionOptions
+    public MqttConnectionOptions MqttOptions => new()
     {
         NodeId = "mynode"
     };
-
-    public event EventHandler<MqttApplicationMessageReceivedEventArgs>? OnApplicationMessageReceived;
-    public event EventHandler<EventArgs>? OnConnect;
-    public event EventHandler<EventArgs>? OnDisconnect;
+    public event Func<MqttApplicationMessageReceivedEventArgs, Task>? OnApplicationMessageReceivedAsync;
+    public event Func<MqttClientConnectedEventArgs, Task>? OnConnectAsync;
+    public event Func<MqttClientDisconnectedEventArgs, Task>? OnDisconnectAsync;
 
     public Task PublishAsync(MqttApplicationMessage applicationMessages)
     {
@@ -35,12 +34,12 @@ public class MqttConnectionServiceMock : IMqttConnectionService
 
 public class TopicHelperTests
 {
-    public GrowattTopicHelper _sut = new GrowattTopicHelper(new MqttConnectionServiceMock());
+    public GrowattTopicHelper _sut = new(new MqttConnectionServiceMock());
 
     [Fact]
     public void ShouldMatchBatteryFirst()
     {
-        var result = _sut.TryParseBatteryFirstModeTopic("mynode/write/jpc7a420fj/battery-first", out var dataLogger);
+        var result = _sut.TryGetDatalogger("mynode/write/jpc7a420fj/battery-first", out var dataLogger);
 
         Assert.True(result);
         Assert.Equal("jpc7a420fj", dataLogger);

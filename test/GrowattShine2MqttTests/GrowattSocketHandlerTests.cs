@@ -21,7 +21,7 @@ public class LoggerMock<T> : ILogger<T>
 
 public class GrowattToMqttHandlerMock : IGrowattToMqttHandler
 {
-    public void NewDataTelegram(GrowattSPHData4Telegram data4Telegram){}
+    public Task HandleDataTelegramAsync(GrowattSPHData4Telegram data4Telegram){ return Task.CompletedTask; }
 }
 
 public class GrowattSocketHandlerTests

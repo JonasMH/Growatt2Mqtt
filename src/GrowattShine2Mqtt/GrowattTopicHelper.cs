@@ -27,10 +27,14 @@ public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
     {
         return $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first";
     }
-
-    public bool TryParseBatteryFirstModeTopic(string topic, out string dataLogger)
+    public string ChargeFromAcTopic(string dataLogger)
     {
-        var regex = new Regex(@$"{_mqttConnection.MqttOptions.NodeId}/write/([A-z0-9]+)/battery-first");
+        return $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/charge-from-ac";
+    }
+
+    public bool TryGetDatalogger(string topic, out string dataLogger)
+    {
+        var regex = new Regex(@$"{_mqttConnection.MqttOptions.NodeId}/write/([A-z0-9]+).*");
         var match = regex.Match(topic);
 
         if( !match.Success ) {

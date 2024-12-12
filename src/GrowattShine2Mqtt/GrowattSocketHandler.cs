@@ -109,7 +109,7 @@ public class GrowattSocketHandler(
             case GrowattSPHData4Telegram data4Telegram:
                 _logger.LogInformation("Received a data4 telegram from {date}, ACKing...", data4Telegram.Date);
                 await SendTelegramAsync(new GrowattSPHData4TelegramAck(telegram.Header));
-                _growattToMqttHandler.NewDataTelegram(data4Telegram);
+                await _growattToMqttHandler.HandleDataTelegramAsync(data4Telegram);
                 break;
         }
     }

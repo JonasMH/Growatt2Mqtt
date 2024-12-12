@@ -4,44 +4,49 @@ using MQTTnet;
 using NodaTime;
 using System.Text.Json;
 using HomeAssistantDiscoveryNet;
-using Microsoft.AspNetCore.Authentication.BearerToken;
 using MQTTnet.Client;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GrowattShine2Mqtt;
 
 public interface IGrowattToMqttHandler
 {
-    void NewDataTelegram(GrowattSPHData4Telegram data4Telegram);
+    Task HandleDataTelegramAsync(GrowattSPHData4Telegram data4Telegram);
 }
 
-public class GrowattToMqttHandler(
-    ILogger<GrowattToMqttHandler> logger,
-    IMqttConnectionService mqttConnection,
-    GrowattTopicHelper topicHelper,
-    GrowattServerListener serverListener) : IHostedService, IGrowattToMqttHandler
+public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 {
-    private readonly ILogger<GrowattToMqttHandler> _logger = logger;
-    private readonly IMqttConnectionService _mqttConnection = mqttConnection;
-    private readonly GrowattTopicHelper _topicHelper = topicHelper;
+    private readonly ILogger<GrowattToMqttHandler> _logger;
+    private readonly IMqttConnectionService _mqttConnection;
+    private readonly GrowattTopicHelper _topicHelper;
     private readonly List<MqttDiscoveryConfig> _dicoveryConfigs = [];
     private Timer? _registerReaderTimer;
+    private readonly Dictionary<string, Func<MqttApplicationMessageReceivedEventArgs, Task>> _topicHandlers;
+    private readonly GrowattServerListener _serverListener;
+
+    public GrowattToMqttHandler(
+        ILogger<GrowattToMqttHandler> logger,
+        IMqttConnectionService mqttConnection,
+        GrowattTopicHelper topicHelper,
+        GrowattServerListener serverListener)
+    {
+        _serverListener = serverListener;
+        _logger = logger;
+        _mqttConnection = mqttConnection;
+        _topicHelper = topicHelper;
+
+        _topicHandlers = new()
+        {
+            {_topicHelper.BatteryFirstModeTopic("+"), HandleBatteryFirstCommandAsync },
+            {_topicHelper.ChargeFromAcTopic("+"), HandleChargeFromAcCommandAsync }
+        };
+    }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting {hostedService}", GetType().Name);
 
-        _mqttConnection.OnConnect += (sender, args) => PublishConfigs();
-        _mqttConnection.OnApplicationMessageReceived += async (sender, args) =>
-        {
-            try
-            {
-                await MessageReceivedAsync(sender, args);
-            } catch(Exception e)
-            {
-                _logger.LogWarning(e, "Failed to handle message to topic {topic}", args.ApplicationMessage.Topic);
-            }
-        };
+        _mqttConnection.OnConnectAsync += async (args) => await PublishConfigs();
+        _mqttConnection.OnApplicationMessageReceivedAsync += HandleApplicationMessageReceivedAsync;
 
         await _mqttConnection.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(_topicHelper.BatteryFirstModeTopic("+")).Build());
 
@@ -50,26 +55,75 @@ public class GrowattToMqttHandler(
         _logger.LogInformation("Started {hostedService}", GetType().Name);
     }
 
-    private async Task MessageReceivedAsync(object? sender, MqttApplicationMessageReceivedEventArgs args)
+
+    private async Task HandleChargeFromAcCommandAsync(MqttApplicationMessageReceivedEventArgs args)
     {
         var topic = args.ApplicationMessage.Topic;
         var content = args.ApplicationMessage.ConvertPayloadToString();
 
-        if (_topicHelper.TryParseBatteryFirstModeTopic(topic, out var datalogger))
+        if (_topicHelper.TryGetDatalogger(topic, out var datalogger))
         {
-            if(content == "false")
+            if (content == "false")
+            {
+                await SetChargeFromAcAsync(datalogger, false);
+            }
+            else if (content == "true")
+            {
+                await SetChargeFromAcAsync(datalogger, true);
+            }
+            else
+            {
+                _logger.LogWarning("Received invalid charge from ac mode. {topic}: {content}", topic, content);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Received message with unmatched topic {topic}", topic);
+        }
+    }
+
+    private async Task HandleBatteryFirstCommandAsync(MqttApplicationMessageReceivedEventArgs args)
+    {
+        var topic = args.ApplicationMessage.Topic;
+        var content = args.ApplicationMessage.ConvertPayloadToString();
+
+        if (_topicHelper.TryGetDatalogger(topic, out var datalogger))
+        {
+            if (content == "false")
             {
                 await SetBatteryFirstAsync(datalogger, false);
-            } else if (content == "true")
+            }
+            else if (content == "true")
             {
                 await SetBatteryFirstAsync(datalogger, true);
-            } else
+            }
+            else
             {
                 _logger.LogWarning("Received invalid battery mode. {topic}: {content}", topic, content);
             }
-        } else
+        }
+        else
         {
             _logger.LogInformation("Received message with unmatched topic {topic}", topic);
+        }
+    }
+
+
+    private async Task HandleApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs args)
+    {
+        foreach (var (topic, handler) in _topicHandlers)
+        {
+            if (MqttTopicFilterComparer.Compare(args.ApplicationMessage.Topic, topic) == MqttTopicFilterCompareResult.IsMatch)
+            {
+                try
+                {
+                    await handler(args);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Handler {handler} failed to handle message", handler.Method.Name);
+                }
+            }
         }
     }
 
@@ -82,7 +136,7 @@ public class GrowattToMqttHandler(
         {
             foreach (var item in interestingRegisters)
             {
-                foreach (var dataLogger in serverListener.Sockets)
+                foreach (var dataLogger in _serverListener.Sockets)
                 {
                     if(dataLogger.Value.Info.DataloggerSerial == null)
                     {
@@ -101,7 +155,7 @@ public class GrowattToMqttHandler(
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            foreach (var dataLogger in serverListener.Sockets)
+            foreach (var dataLogger in _serverListener.Sockets)
             {
                 if (dataLogger.Value.Info.DataloggerSerial == null)
                 {
@@ -127,7 +181,7 @@ public class GrowattToMqttHandler(
     public async Task SetBatteryFirstAsync(string datalogger, bool mode)
     {
         _logger.LogInformation("Setting battery first mode to {value} on {datalogger}", mode, datalogger);
-        var loggerSocket = serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial?.ToLower() == datalogger?.ToLower());
+        var loggerSocket = _serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial?.ToLower() == datalogger?.ToLower());
         if(loggerSocket == null)
         {
             _logger.LogWarning("Failed to find datalogger socket for {datalogger}", loggerSocket!.Info.DataloggerSerial);
@@ -159,9 +213,28 @@ public class GrowattToMqttHandler(
         await loggerSocket.SendTelegramAsync(telegram);
     }
 
-    public void NewDataTelegram(GrowattSPHData4Telegram data4Telegram)
+    public async Task SetChargeFromAcAsync(string datalogger, bool mode)
     {
-        CheckConfigExists(data4Telegram);
+        _logger.LogInformation("Setting ac charge mode to {value} on {datalogger}", mode, datalogger);
+        var loggerSocket = _serverListener.Sockets.Values.FirstOrDefault(x => x.Info.DataloggerSerial?.ToLower() == datalogger?.ToLower());
+        if (loggerSocket == null)
+        {
+            _logger.LogWarning("Failed to find datalogger socket for {datalogger}", loggerSocket!.Info.DataloggerSerial);
+            return;
+        }
+
+        var telegram = new GrowattInverterCommandTelegram()
+        {
+            DataloggerId = loggerSocket.Info.DataloggerSerial!,
+            Register = 1092, // Is charge from ac mode is enable
+            Value = mode ? (ushort)1 : (ushort)0 // 1 = true, 0 = false
+        };
+        await loggerSocket.SendTelegramAsync(telegram);
+    }
+
+    public async Task HandleDataTelegramAsync(GrowattSPHData4Telegram data4Telegram)
+    {
+        await CheckConfigExists(data4Telegram);
 
         var outputPriority = "UNKNOWN";
         switch(data4Telegram.OutputPriority)
@@ -243,7 +316,7 @@ public class GrowattToMqttHandler(
             .GetAwaiter().GetResult();
     }
 
-    private void CheckConfigExists(GrowattSPHData4Telegram data4Telegram)
+    private async Task CheckConfigExists(GrowattSPHData4Telegram data4Telegram)
     {
         if (_dicoveryConfigs.Any(x => x.UniqueId?.Contains(data4Telegram.Datalogserial, StringComparison.InvariantCultureIgnoreCase) ?? false))
         {
@@ -343,10 +416,42 @@ public class GrowattToMqttHandler(
             CommandTemplate = "false"
         });
 
-        PublishConfigs();
+
+        _dicoveryConfigs.Add(new MqttButtonDiscoveryConfig()
+        {
+            Name = "Enable Charge From AC",
+            UniqueId = data4Telegram.Datalogserial.ToLower() + "_enablechargefromac",
+            Device = new MqttDiscoveryDevice
+            {
+                Name = "Growatt Shine " + data4Telegram.Datalogserial,
+                Identifiers =
+                [
+                    data4Telegram.Datalogserial
+                ]
+            },
+            CommandTopic = _topicHelper.ChargeFromAcTopic(data4Telegram.Datalogserial),
+            CommandTemplate = "true"
+        });
+        _dicoveryConfigs.Add(new MqttButtonDiscoveryConfig()
+        {
+            Name = "Disable Charge From AC",
+            UniqueId = data4Telegram.Datalogserial.ToLower() + "_disablechargefromac",
+            Device = new MqttDiscoveryDevice
+            {
+                Name = "Growatt Shine " + data4Telegram.Datalogserial,
+                Identifiers =
+                [
+                    data4Telegram.Datalogserial
+                ]
+            },
+            CommandTopic = _topicHelper.ChargeFromAcTopic(data4Telegram.Datalogserial),
+            CommandTemplate = "false"
+        });
+
+        await PublishConfigs();
     }
 
-    private void PublishConfigs()
+    private async Task PublishConfigs()
     {
         _logger.LogInformation("Trying to publish growatt discovery documents");
         if (_dicoveryConfigs == null)
@@ -356,15 +461,14 @@ public class GrowattToMqttHandler(
 
         foreach (var config in _dicoveryConfigs)
         {
-            _mqttConnection.PublishDiscoveryDocument(config);
+            await _mqttConnection.PublishDiscoveryDocument(config);
         }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping {hostedService}", GetType().Name);
-
-
+        _registerReaderTimer?.Dispose();
         _logger.LogInformation("Stopped {hostedService}", GetType().Name);
         return Task.CompletedTask;
     }
