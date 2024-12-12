@@ -48,10 +48,9 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         _mqttConnection.OnConnectAsync += async (args) => await PublishConfigs();
         _mqttConnection.OnApplicationMessageReceivedAsync += HandleApplicationMessageReceivedAsync;
 
-        await _mqttConnection.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(_topicHelper.BatteryFirstModeTopic("+")).Build());
+        await _mqttConnection.SubscribeAsync(_topicHandlers.Select(x => new MqttTopicFilterBuilder().WithTopic(x.Key).Build()).ToArray());
 
         _registerReaderTimer = new Timer(async (state) => await ReadRegistersAsync(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
-
         _logger.LogInformation("Started {hostedService}", GetType().Name);
     }
 
