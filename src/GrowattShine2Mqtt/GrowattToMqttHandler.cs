@@ -161,13 +161,14 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 
     private async Task HandleApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs args)
     {
-        foreach (var (topic, handler) in _topicHandlers)
+        var messageTopic = args.ApplicationMessage.Topic;
+        foreach (var (handlerTopic, handler) in _topicHandlers)
         {
-            if (MqttTopicFilterComparer.Compare(args.ApplicationMessage.Topic, topic) == MqttTopicFilterCompareResult.IsMatch)
+            if (MqttTopicFilterComparer.Compare(messageTopic, handlerTopic) == MqttTopicFilterCompareResult.IsMatch)
             {
-                if (!_topicHelper.TryGetDatalogger(topic, out var datalogger))
+                if (!_topicHelper.TryGetDatalogger(messageTopic, out var datalogger))
                 {
-                    _logger.LogWarning("Failed to find datalogger from topic {topic}", topic);
+                    _logger.LogWarning("Failed to find datalogger from topic {topic}", messageTopic);
                     continue;
                 }
 
