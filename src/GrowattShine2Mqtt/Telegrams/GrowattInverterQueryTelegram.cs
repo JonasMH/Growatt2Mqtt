@@ -1,4 +1,6 @@
 ﻿using System.Text;
+using Microsoft.Win32;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GrowattShine2Mqtt.Telegrams;
 
@@ -26,11 +28,14 @@ public class GrowattInverterQueryTelegram : IGrowattTelegram, ISerializeableGrow
         buffer.AddRange(new byte[20]); // Random space??
         buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16(StartAddress));
         buffer.AddRange(GrowattByteDecoder.Instance.WriteUInt16(EndAddress));
-
         return [.. buffer];
     }
 
 
+    public override string ToString()
+    {
+        return $"{GetType().Name}: Datelogger={DataloggerId} Start={StartAddress} End={EndAddress}";
+    }
 }
 
 public class GrowattInverterQueryResponseTelegram(GrowattTelegramHeader header) : IGrowattTelegram

@@ -60,7 +60,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 
         await _mqttConnection.SubscribeAsync(_topicHandlers.Select(x => new MqttTopicFilterBuilder().WithTopic(x.Key).Build()).ToArray());
 
-        _registerReaderTimer = new Timer(async (state) => await ReadRegistersAsync(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
+        _registerReaderTimer = new Timer(async (state) => await ReadRegistersAsync(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         _logger.LogInformation("Started {hostedService}", GetType().Name);
     }
 
@@ -216,8 +216,9 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                     await dataLogger.Value.SendTelegramAsync(telegram);
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(5));
             }
+            await Task.Delay(TimeSpan.FromSeconds(10));
 
             foreach (var dataLogger in _serverListener.Sockets)
             {
@@ -445,7 +446,11 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Device = device,
             CommandTopic = _topicHelper.BatteryFirstChargeSocTopic(data4Telegram.Datalogserial),
             StateTopic = _topicHelper.GetInverterRegistryStatus(data4Telegram.Datalogserial),
-            ValueTemplate =  $"{{{{ value_json.{GrowattInverterRegisters.BatteryFirstSoC} }}}}"
+            ValueTemplate =  $"{{{{ value_json.{GrowattInverterRegisters.BatteryFirstSoC} }}}}",
+            Min = 0,
+            Max = 100,
+            Step = 1,
+            UnitOfMeasurement = HomeAssistantUnits.PERCENTAGE.Value
         });
 
         await PublishConfigs();
