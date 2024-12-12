@@ -39,6 +39,7 @@ public class GrowattDataloggerInformation {
     public Dictionary<ushort, ushort> InverterRegisterValues { get; set; } = [];
 }
 
+[method: ActivatorUtilitiesConstructor]
 public class GrowattSocketHandler(
     ILogger<GrowattSocketHandler> logger,
     IGrowattToMqttHandler growattToMqttHandler,
@@ -48,25 +49,17 @@ public class GrowattSocketHandler(
     IDateTimeZoneProvider timeZoneProvider,
     IGrowattSocket socket)
 {
-    private readonly ILogger<GrowattSocketHandler> _logger = logger;
-    private readonly IGrowattToMqttHandler _growattToMqttHandler = growattToMqttHandler;
-    private readonly IGrowattTelegramParser _telegramParser = growattTelegramParser;
-    private readonly GrowattMetrics _metrics = metrics;
-    private readonly IClock _systemClock = systemClock;
-    private readonly IDateTimeZoneProvider _timeZoneProvider = timeZoneProvider;
-    private readonly IGrowattSocket _socket = socket;
-
     public GrowattDataloggerInformation Info { get; } = new();
 
     public async Task HandleMessageAsync(ArraySegment<byte> buffer)
     {
         var header = GrowattTelegramHeader.Parse(buffer);
-        var telegram = _telegramParser.ParseMessage(buffer);
+        var telegram = growattTelegramParser.ParseMessage(buffer);
 
-        _logger.LogInformation("Received {packageTypeRaw}({packetType}) packet of size {size} bytes v{protocolVersion}", header.MessageTypeRaw.ToHex(), header.MessageType, buffer.Count, header.ProtocolVersion);
-        if(_logger.IsEnabled(LogLevel.Debug))
+        logger.LogInformation("Received {packageTypeRaw}({packetType}) packet of size {size} bytes v{protocolVersion}", header.MessageTypeRaw.ToHex(), header.MessageType, buffer.Count, header.ProtocolVersion);
+        if(logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("0x{packet}", buffer.ToHex());
+            logger.LogDebug("0x{packet}", buffer.ToHex());
         }
 
         if (telegram == null)
@@ -74,29 +67,29 @@ public class GrowattSocketHandler(
             return;
         }
 
-        _metrics.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+        metrics.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
 
         switch (telegram)
         {
             case GrowattSPHPingTelegram _:
-                _logger.LogInformation("Received a ping, echoing...");
-                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
-                await _socket.SendAsync(buffer);
+                logger.LogInformation("Received a ping, echoing...");
+                metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+                await socket.SendAsync(buffer);
                 break;
             case GrowattDataloggerQueryResponseTelegram cmdResponseTelegram:
-                _logger.LogInformation("Datalogger register {register}=0x{data}", cmdResponseTelegram.Register, cmdResponseTelegram.Data.ToHex());
+                logger.LogInformation("Datalogger register {register}=0x{data}", cmdResponseTelegram.Register, cmdResponseTelegram.Data.ToHex());
                 Info.DataloggerRegisterValues.AddOrUpdate(cmdResponseTelegram.Register, cmdResponseTelegram.Data);
                 break;
             case GrowattInverterCommandResponseTelegram inverterCommandResponse:
-                _logger.LogInformation("Inverter register (Result={result}) {register}=0x{dataHex} ({data})", inverterCommandResponse.Result, inverterCommandResponse.Register, inverterCommandResponse.Data.ToHex(), inverterCommandResponse.Data);
+                logger.LogInformation("Inverter register (Result={result}) {register}=0x{dataHex} ({data})", inverterCommandResponse.Result, inverterCommandResponse.Register, inverterCommandResponse.Data.ToHex(), inverterCommandResponse.Data);
                 Info.InverterRegisterValues.AddOrUpdate(inverterCommandResponse.Register, inverterCommandResponse.Data);
                 break;
             case GrowattInverterQueryResponseTelegram inverterQueryResponse:
-                _logger.LogInformation("Inverter register {register}=0x{dataHex} ({data})", inverterQueryResponse.Register, inverterQueryResponse.Data.ToHex(), inverterQueryResponse.Data);
+                logger.LogInformation("Inverter register {register}=0x{dataHex} ({data})", inverterQueryResponse.Register, inverterQueryResponse.Data.ToHex(), inverterQueryResponse.Data);
                 Info.InverterRegisterValues.AddOrUpdate(inverterQueryResponse.Register, inverterQueryResponse.Data);
                 break;
             case GrowattSPHData3Telegram data3Telegram:
-                _logger.LogInformation("Received data3 telegram from {serial}, ACKing...", data3Telegram.Datalogserial);
+                logger.LogInformation("Received data3 telegram from {serial}, ACKing...", data3Telegram.Datalogserial);
                 Info.DataloggerSerial = data3Telegram.Datalogserial;
 
                 await SendTelegramAsync(new GrowattSPHData3TelegramAck(telegram.Header));
@@ -104,60 +97,60 @@ public class GrowattSocketHandler(
                 await SendTelegramAsync(new GrowattDataloggerCommandTelegram()
                 {
                     LoggerId = data3Telegram.Datalogserial
-                }.CreateTimeCommand(_systemClock.GetCurrentInstant().InZone(_timeZoneProvider.GetSystemDefault()).LocalDateTime));
+                }.CreateTimeCommand(systemClock.GetCurrentInstant().InZone(timeZoneProvider.GetSystemDefault()).LocalDateTime));
                 break;
             case GrowattSPHData4Telegram data4Telegram:
-                _logger.LogInformation("Received a data4 telegram from {date}, ACKing...", data4Telegram.Date);
+                logger.LogInformation("Received a data4 telegram from {date}, ACKing...", data4Telegram.Date);
                 await SendTelegramAsync(new GrowattSPHData4TelegramAck(telegram.Header));
-                await _growattToMqttHandler.HandleDataTelegramAsync(data4Telegram);
+                await growattToMqttHandler.HandleDataTelegramAsync(data4Telegram);
                 break;
         }
     }
 
     public async Task SendTelegramAsync(ISerializeableGrowattTelegram telegram)
     {
-        var buffer = _telegramParser.PackMessage(telegram);
+        var buffer = growattTelegramParser.PackMessage(telegram);
 
-        if(_logger.IsEnabled(LogLevel.Debug))
+        if(logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("Sending {telegramType}: 0x{telegramData}", telegram.GetType().Name, buffer.ToHex());
+            logger.LogDebug("Sending {telegramType}: 0x{telegramData}", telegram.GetType().Name, buffer.ToHex());
         } else
         {
-            _logger.LogInformation("Sending {telegramType}: {content}", telegram.GetType().Name, telegram.ToString());
+            logger.LogInformation("Sending {telegramType}: {content}", telegram.GetType().Name, telegram.ToString());
         }
 
-        _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
-        await _socket.SendAsync(buffer);
+        metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+        await socket.SendAsync(buffer);
     }
 
     public async Task RunAsync(CancellationToken token)
     {
         byte[] buffer = new byte[1024 * 8];
-        while (!token.IsCancellationRequested && _socket.Connected)
+        while (!token.IsCancellationRequested && socket.Connected)
         {
-            if (_socket.Available <= 0)
+            if (socket.Available <= 0)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(5), token);
                 continue;
             }
 
-            if(!_socket.Connected)
+            if(!socket.Connected)
             {
-                _logger.LogInformation("Socket {socketId} no longer connected", _socket.SocketId);
+                logger.LogInformation("Socket {socketId} no longer connected", socket.SocketId);
                 return;
             }
 
             var received = new ArraySegment<byte>();
             try
             {
-                var amountReceived = await _socket.ReceiveAsync(buffer);
+                var amountReceived = await socket.ReceiveAsync(buffer);
                 received = new ArraySegment<byte>(buffer, 0, amountReceived);
                 await HandleMessageAsync(received);
 
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Failed to handle socket {socketid}. Data: {data}", _socket.SocketId, received.ToHex());
+                logger.LogError(e, "Failed to handle socket {socketid}. Data: {data}", socket.SocketId, received.ToHex());
                 return;
             }
         }
