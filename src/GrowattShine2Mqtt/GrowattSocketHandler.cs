@@ -43,7 +43,7 @@ public class GrowattSocketHandler(
     ILogger<GrowattSocketHandler> logger,
     IGrowattToMqttHandler growattToMqttHandler,
     IGrowattTelegramParser growattTelegramParser,
-    GrowattMetrics? metrics,
+    GrowattMetrics metrics,
     IClock systemClock,
     IDateTimeZoneProvider timeZoneProvider,
     IGrowattSocket socket)
@@ -51,7 +51,7 @@ public class GrowattSocketHandler(
     private readonly ILogger<GrowattSocketHandler> _logger = logger;
     private readonly IGrowattToMqttHandler _growattToMqttHandler = growattToMqttHandler;
     private readonly IGrowattTelegramParser _telegramParser = growattTelegramParser;
-    private readonly GrowattMetrics? _metrics = metrics;
+    private readonly GrowattMetrics _metrics = metrics;
     private readonly IClock _systemClock = systemClock;
     private readonly IDateTimeZoneProvider _timeZoneProvider = timeZoneProvider;
     private readonly IGrowattSocket _socket = socket;
@@ -74,13 +74,13 @@ public class GrowattSocketHandler(
             return;
         }
 
-        _metrics?.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+        _metrics.MessageReceived(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
 
         switch (telegram)
         {
             case GrowattSPHPingTelegram _:
                 _logger.LogInformation("Received a ping, echoing...");
-                _metrics?.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+                _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
                 await _socket.SendAsync(buffer);
                 break;
             case GrowattDataloggerQueryResponseTelegram cmdResponseTelegram:
@@ -126,7 +126,7 @@ public class GrowattSocketHandler(
             _logger.LogInformation("Sending {telegramType}: {content}", telegram.GetType().Name, telegram.ToString());
         }
 
-        _metrics?.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
+        _metrics.MessageSent(telegram.Header.MessageType?.ToString() ?? "", buffer.Count);
         await _socket.SendAsync(buffer);
     }
 
@@ -169,12 +169,9 @@ public static class DictionaryExtensions
 {
     public static void AddOrUpdate<TKey, TValue>(this Dictionary<TKey, TValue> dic, TKey key, TValue value) where TKey : notnull
     {
-        if(dic.ContainsKey(key))
+        if (!dic.TryAdd(key, value))
         {
             dic[key] = value;
-        } else
-        {
-            dic.Add(key, value);
         }
     }
 }
