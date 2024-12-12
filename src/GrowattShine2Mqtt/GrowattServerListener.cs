@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Net.Sockets;
 using Microsoft.Extensions.Options;
+using NodaTime;
 
 namespace GrowattShine2Mqtt;
 
@@ -70,7 +71,16 @@ public class GrowattServerListener(
         try
         {
             var socketInfo = new GrowattSocket(socket, socketId);
-            var handler = ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, socketInfo);
+            var handler = new GrowattSocketHandler(
+                _serviceProvider.GetRequiredService<ILogger<GrowattSocketHandler>>(),
+                _serviceProvider.GetRequiredService<IGrowattToMqttHandler>(),
+                _serviceProvider.GetRequiredService<IGrowattTelegramParser>(),
+                _serviceProvider.GetRequiredService<GrowattMetrics>(),
+                _serviceProvider.GetRequiredService<IClock>(),
+                _serviceProvider.GetRequiredService<IDateTimeZoneProvider>(),
+                socketInfo);
+
+                ActivatorUtilities.CreateInstance<GrowattSocketHandler>(_serviceProvider, socketInfo);
             _socketRefs.Add(socketId, handler);
             await handler.RunAsync(_serviceRunningToken.Token);
         } catch(Exception e)
