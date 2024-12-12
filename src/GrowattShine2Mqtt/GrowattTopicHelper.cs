@@ -8,29 +8,14 @@ public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
 {
     private readonly IMqttConnectionService _mqttConnection = mqttConnection;
 
-    public string GetConnectedTopic()
-    {
-        return $"{_mqttConnection.MqttOptions.NodeId}/connected";
-    }
+    public string GetConnectedTopic() => $"{_mqttConnection.MqttOptions.NodeId}/connected";
+    public string GetDataPublishTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/data";
+    public string GetInverterRegistryStatus(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/inverter-registers";
+    public string BatteryFirstModeTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first";
+    public string BatteryFirstChargeSocTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first-soc";
+    public string ChargeFromAcTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/charge-from-ac";
 
-    public string GetDataPublishTopic(string dataLogger)
-    {
-        return $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/data";
-    }
 
-    public string GetInverterRegistryStatus(string dataLogger)
-    {
-        return $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/inverter-registers";
-    }
-
-    public string BatteryFirstModeTopic(string dataLogger)
-    {
-        return $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first";
-    }
-    public string ChargeFromAcTopic(string dataLogger)
-    {
-        return $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/charge-from-ac";
-    }
 
     public bool TryGetDatalogger(string topic, out string dataLogger)
     {

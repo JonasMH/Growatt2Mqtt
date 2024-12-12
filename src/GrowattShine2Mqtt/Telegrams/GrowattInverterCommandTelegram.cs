@@ -2,12 +2,6 @@
 
 namespace GrowattShine2Mqtt.Telegrams;
 
-
-public enum GrowattInveterRegisters
-{
-
-}
-
 public class GrowattInverterCommandTelegram : IGrowattTelegram, ISerializeableGrowattTelegram
 {
     public GrowattInverterCommandTelegram()
