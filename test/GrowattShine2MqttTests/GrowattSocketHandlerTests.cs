@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Text;
 using GrowattShine2Mqtt;
@@ -7,6 +8,18 @@ using Microsoft.Extensions.Logging;
 using NodaTime;
 
 namespace GrowattShine2MqttTests;
+
+public class MeterFactoryStub : IMeterFactory
+{
+    public Meter Create(MeterOptions options)
+    {
+        return new Meter(options);
+    }
+
+    public void Dispose()
+    {
+    }
+}
 
 public class LoggerMock<T> : ILogger<T>
 {
@@ -40,7 +53,7 @@ public class GrowattSocketHandlerTests
             new LoggerMock<GrowattSocketHandler>(),
             new GrowattToMqttHandlerMock(),
             new GrowattTelegramParser(new LoggerMock<GrowattTelegramParser>(), new GrowattTelegramEncrypter()),
-            null,
+            new GrowattMetrics(new MeterFactoryStub()),
             systemClockMock,
             timeZoneProviderMock,
             _growattSocketMock);
