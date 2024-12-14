@@ -194,7 +194,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 
     public async Task ReadRegistersAsync()
     {
-        var interestingRegisters = new ushort[] { 1044, 1091, 1092 };
+        var interestingRegisters = new ushort[] { 1044, GrowattInverterRegisters.BatteryFirstSoC, GrowattInverterRegisters.BatteryFirstAcCharge };
         _logger.LogInformation("Reading registers");
 
         try
@@ -447,7 +447,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Device = device,
             CommandTopic = _topicHelper.BatteryFirstChargeSocTopic(data4Telegram.Datalogserial),
             StateTopic = _topicHelper.GetInverterRegistryStatus(data4Telegram.Datalogserial),
-            ValueTemplate =  $"{{{{ value_json.{GrowattInverterRegisters.BatteryFirstSoC} }}}}",
+            ValueTemplate =  $"{{{{ value_json.['{GrowattInverterRegisters.BatteryFirstSoC}'] }}}}",
             Min = 0,
             Max = 100,
             Step = 1,
