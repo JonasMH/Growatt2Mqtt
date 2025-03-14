@@ -23,7 +23,7 @@ public class GrowattServerListener(
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly GrowattMetrics? _metrics = metrics;
     private readonly CancellationTokenSource _serviceRunningToken = new();
-    private TcpListener _listener;
+    private TcpListener _listener = null!;
     private Task? _listenTask;
     private int _socketIdCounter = 1;
 
@@ -80,12 +80,15 @@ public class GrowattServerListener(
                 _serviceProvider.GetRequiredService<IDateTimeZoneProvider>(),
                 socketInfo);
             _socketRefs.Add(socketId, handler);
+            _metrics?.ActiveConnections(_socketRefs.Count);
             await handler.RunAsync(_serviceRunningToken.Token);
-        } catch(Exception e)
+        }
+        catch (Exception e)
         {
             _logger.LogError(e, "Socket {socketId} failed", socketId);
             return;
-        } finally
+        }
+        finally
         {
             socket.Close();
             socket.Dispose();

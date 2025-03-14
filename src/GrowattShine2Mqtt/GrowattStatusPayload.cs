@@ -43,13 +43,13 @@ public class GrowattStatusPayload
     public float Elocalload_tod { get; set; }
     public float Elocalload_tot { get; set; }
     public float Plocaloadtot { get; set; }
-    public float Etouser_tod { get; internal set; }
-    public float Etouser_tot { get; internal set; }
-    public float Eactotal { get; internal set; }
-    public string OutputPriority { get; internal set; }
-    public float Epvtotal { get; internal set; }
-    public float Eharge1_tod { get; internal set; }
-    public float Eharge1_tot { get; internal set; }
-    public float Etogrid_tod { get; internal set; }
-    public float Etogrid_tot { get; internal set; }
+    public float Etouser_tod { get; set; }
+    public float Etouser_tot { get; set; }
+    public float Eactotal { get; set; }
+    public required string OutputPriority { get; set; }
+    public float Epvtotal { get; set; }
+    public float Eharge1_tod { get; set; }
+    public float Eharge1_tot { get; set; }
+    public float Etogrid_tod { get; set; }
+    public float Etogrid_tot { get; set; }
 }
