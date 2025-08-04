@@ -15,11 +15,22 @@ public interface IGrowattToMqttHandler
 
 public static class GrowattInverterRegisters
 {
-    public const ushort BatteryFirstSoC = 1091;
-    public const ushort BatteryFirstAcCharge = 1092;
-    public const ushort BatteryFirst1Start = 1100;
-    public const ushort BatteryFirst1Stop = 1101;
-    public const ushort BatteryFirst1Enabled = 1102;
+    public static readonly GrowattInverterRegister ExportLimitEnableDisable = new(122, "ExportLimitEnableDisable");
+
+    /// <summary>
+    /// Range: -1000~+1000, Step size: 0.1%
+    /// </summary>
+    public static readonly GrowattInverterRegister ExportLimitPowerRate = new(123, "ExportLimitPowerRate");
+
+    public static readonly GrowattInverterRegister BatteryFirstSoC = new(1091, "BatteryFirstSoC");
+    public static readonly GrowattInverterRegister BatteryFirstAcCharge = new(1092, "BatteryFirstAcCharge");
+    public static readonly GrowattInverterRegister BatteryFirst1Start = new(1100, "BatteryFirst1Start");
+    public static readonly GrowattInverterRegister BatteryFirst1Stop = new(1101, "BatteryFirst1Stop");
+    public static readonly GrowattInverterRegister BatteryFirst1Enabled = new(1102, "BatteryFirst1Enabled");
+}
+
+public record GrowattInverterRegister(ushort Register, string Name)
+{
 }
 
 public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
@@ -89,7 +100,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
             DataloggerId = growattSocket.Info.DataloggerSerial!,
-            Register = GrowattInverterRegisters.BatteryFirstAcCharge,
+            Register = GrowattInverterRegisters.BatteryFirstAcCharge.Register,
             Value = mode ? (ushort)1 : (ushort)0 // 1 = true, 0 = false
         });
     }
@@ -118,21 +129,21 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
             DataloggerId = growattSocket.Info.DataloggerSerial!,
-            Register = GrowattInverterRegisters.BatteryFirst1Enabled,
+            Register = GrowattInverterRegisters.BatteryFirst1Enabled.Register,
             Value = mode ? (ushort)1 : (ushort)0 // 1 = true, 0 = false
         });
         await Task.Delay(TimeSpan.FromSeconds(2));
         await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
             DataloggerId = growattSocket.Info.DataloggerSerial!,
-            Register = GrowattInverterRegisters.BatteryFirst1Enabled,
+            Register = GrowattInverterRegisters.BatteryFirst1Enabled.Register,
             Value = 0, // 00:00
         });
         await Task.Delay(TimeSpan.FromSeconds(2));
         await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
             DataloggerId = growattSocket.Info.DataloggerSerial!,
-            Register = GrowattInverterRegisters.BatteryFirst1Stop,
+            Register = GrowattInverterRegisters.BatteryFirst1Stop.Register,
             Value = 5947 // 23:59
         });
     }
@@ -153,7 +164,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
             DataloggerId = growattSocket.Info.DataloggerSerial!,
-            Register = GrowattInverterRegisters.BatteryFirstSoC,
+            Register = GrowattInverterRegisters.BatteryFirstSoC.Register,
             Value = targetSoc
         });
     }
@@ -194,7 +205,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 
     public async Task ReadRegistersAsync()
     {
-        var interestingRegisters = new ushort[] { 1044, GrowattInverterRegisters.BatteryFirstSoC, GrowattInverterRegisters.BatteryFirstAcCharge };
+        var interestingRegisters = new GrowattInverterRegister[] { new(1044, ""), GrowattInverterRegisters.BatteryFirstSoC, GrowattInverterRegisters.BatteryFirstAcCharge, GrowattInverterRegisters.ExportLimitEnableDisable, GrowattInverterRegisters.ExportLimitPowerRate };
         _logger.LogInformation("Reading registers");
 
         try
@@ -203,7 +214,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             {
                 foreach (var dataLogger in _serverListener.Sockets)
                 {
-                    if(dataLogger.Value.Info.DataloggerSerial == null)
+                    if (dataLogger.Value.Info.DataloggerSerial == null)
                     {
                         continue;
                     }
@@ -211,8 +222,8 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                     var telegram = new GrowattInverterQueryTelegram()
                     {
                         DataloggerId = dataLogger.Value.Info.DataloggerSerial,
-                        StartAddress = (ushort)item,
-                        EndAddress = (ushort)item
+                        StartAddress = item.Register,
+                        EndAddress = item.Register
                     };
                     await dataLogger.Value.SendTelegramAsync(telegram);
                 }
@@ -228,7 +239,14 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                     continue;
                 }
 
-                var statusPayload = JsonSerializer.Serialize(dataLogger.Value.Info.InverterRegisterValues, GrowattMqttJsonSerializerContext.Default.DictionaryUInt16UInt16);
+                var statusPayload = JsonSerializer.Serialize(new GrowattRegistersStatus
+                {
+                    Registers = dataLogger.Value.Info.InverterRegisterValues.ToDictionary(x => x.Key, x => new GrowattRegisterStatus
+                    {
+                        RawValue = x.Value,
+                        Name = interestingRegisters.FirstOrDefault(r => r.Register == x.Key)?.Name ?? ""
+                    })
+                }, GrowattMqttJsonSerializerContext.Default.GrowattRegistersStatus);
 
                 _logger.LogInformation("Publishing registers");
                 await _mqttConnection.PublishAsync(
@@ -238,7 +256,8 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                     .Build());
             }
 
-        } catch(Exception e)
+        }
+        catch (Exception e)
         {
             _logger.LogError(e, "Failed to query registers");
         }
@@ -249,7 +268,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         await CheckConfigExists(data4Telegram);
 
         var outputPriority = "UNKNOWN";
-        switch(data4Telegram.OutputPriority)
+        switch (data4Telegram.OutputPriority)
         {
             case 0:
                 outputPriority = "LOAD";
@@ -359,7 +378,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         _dicoveryConfigs.Add(new MqttSensorDiscoveryConfigBuilder(_topicHelper, nameof(GrowattStatusPayload.Pactousertot), "Grid Import Actual", HomeAssistantUnits.POWER_WATT, data4Telegram).SetStateClass(MqttDiscoveryStateClass.Measurement).Config);
         _dicoveryConfigs.Add(new MqttSensorDiscoveryConfigBuilder(_topicHelper, nameof(GrowattStatusPayload.Etouser_tod), "Grid Import Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram).Config);
         _dicoveryConfigs.Add(new MqttSensorDiscoveryConfigBuilder(_topicHelper, nameof(GrowattStatusPayload.Etouser_tot), "Grid Import Total", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram).SetStateClass(MqttDiscoveryStateClass.TotalIncreasing).SetDeviceClass(HomeAssistantDeviceClass.ENERGY).SetLastReset(lastReset).Config);
-        
+
         // Grid export Load
         _dicoveryConfigs.Add(new MqttSensorDiscoveryConfigBuilder(_topicHelper, nameof(GrowattStatusPayload.Pactogridtot), "Grid Export Actual", HomeAssistantUnits.POWER_WATT, data4Telegram).SetStateClass(MqttDiscoveryStateClass.Measurement).Config);
         _dicoveryConfigs.Add(new MqttSensorDiscoveryConfigBuilder(_topicHelper, nameof(GrowattStatusPayload.Etogrid_tod), "Grid Export Today", HomeAssistantUnits.ENERGY_KILO_WATT_HOUR, data4Telegram).Config);
@@ -447,7 +466,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Device = device,
             CommandTopic = _topicHelper.BatteryFirstChargeSocTopic(data4Telegram.Datalogserial),
             StateTopic = _topicHelper.GetInverterRegistryStatus(data4Telegram.Datalogserial),
-            ValueTemplate =  $"{{{{ value_json.['{GrowattInverterRegisters.BatteryFirstSoC}'] }}}}",
+            ValueTemplate = $"{{{{ value_json.['{GrowattInverterRegisters.BatteryFirstSoC}'] }}}}",
             Min = 0,
             Max = 100,
             Step = 1,
