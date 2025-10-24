@@ -92,6 +92,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                 {
                     _logger.LogError(ex, "Error reading registers");
                 }
+                await Task.Delay(TimeSpan.FromSeconds(30));
             }
         });
         _logger.LogInformation("Started {hostedService}", GetType().Name);
