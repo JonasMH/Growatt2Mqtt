@@ -27,7 +27,7 @@ public static class GrowattInverterRegisters
     public static readonly GrowattInverterRegister BatteryFirst1Start = new(1100, "BatteryFirst1Start");
     public static readonly GrowattInverterRegister BatteryFirst1Stop = new(1101, "BatteryFirst1Stop");
     public static readonly GrowattInverterRegister BatteryFirst1Enabled = new(1102, "BatteryFirst1Enabled");
-    public static readonly GrowattInverterRegister LoadFirstStopSocSet = new(1102, "bLoadFirstStopSocSet");
+    public static readonly GrowattInverterRegister LoadFirstStopSocSet = new(3082, "LoadFirstStopSocSet");
 }
 
 public record GrowattInverterRegister(ushort Register, string Name)
