@@ -15,6 +15,7 @@ public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
     public string BatteryFirstChargeSocTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first-soc";
     public string ChargeFromAcTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/charge-from-ac";
 
+    public string ExportLimitTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/export-limit";
 
 
     public bool TryGetDatalogger(string topic, out string dataLogger)
@@ -30,4 +31,6 @@ public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
         dataLogger = match.Groups[1].Value;
         return true;
     }
+
+
 }

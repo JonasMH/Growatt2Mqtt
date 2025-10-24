@@ -76,7 +76,7 @@ public class GrowattSocketHandlerTests
 
         var lastSentBuffer = _growattSocketMock.Sends.First();
 
-        Assert.Equal("000200060003010347099a", lastSentBuffer.ToHex(), ignoreCase: true);
+        Assert.Equal("000200060003010347099a", Convert.ToHexString(lastSentBuffer), ignoreCase: true);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class GrowattSocketHandlerTests
 
         var lastSentBuffer = _growattSocketMock.Sends.Last();
 
-        Assert.Equal("00010006003701180d222c402040467734257761747447726f7761747447726f7761747447726f6861674677405d5a514d59774b4f47594e4474485f43b996", lastSentBuffer.ToHex(), ignoreCase: true);
+        Assert.Equal("00010006003701180d222c402040467734257761747447726f7761747447726f7761747447726f6861674677405d5a514d59774b4f47594e4474485f43b996", Convert.ToHexString(lastSentBuffer), ignoreCase: true);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class GrowattSocketHandlerTests
 
         var lastSentBuffer = _growattSocketMock.Sends.Last();
 
-        Assert.Equal("0002000600030104473998", lastSentBuffer.ToHex(), ignoreCase: true);
+        Assert.Equal("0002000600030104473998", Convert.ToHexString(lastSentBuffer), ignoreCase: true);
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class GrowattSocketHandlerTests
         var expected = "00010006002401190D222C402040467734257761747447726F7761747447726F7761747447726F7F617C3490";
         var expectedDecrypted = encrypter.Decrypt(expected.ParseHex());
 
-        Assert.Equal(expectedDecrypted.ToHex(), resultDecrypted.ToHex(), ignoreCase: true);
+        Assert.Equal(Convert.ToHexString(expectedDecrypted), Convert.ToHexString(resultDecrypted), ignoreCase: true);
     }
 
 

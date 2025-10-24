@@ -35,6 +35,6 @@ public class GrowattTelegramEncrypterTest {
         var result = _sut.Decrypt(input);
         result = _sut.Decrypt(result);
 
-        Assert.Equal(input.ToHex(), result.ToHex());
+        Assert.Equal(Convert.ToHexString(input), Convert.ToHexString(result));
     }
 }

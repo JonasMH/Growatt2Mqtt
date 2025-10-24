@@ -58,6 +58,6 @@ public class GrowattInverterQueryResponseTelegram(GrowattTelegramHeader header) 
 
     public override string ToString()
     {
-        return $"{GetType().Name}: Addr {Register} Data {Data.ToHex()}";
+        return $"{GetType().Name}: Addr {Register} Data {Data:X}";
     }
 }

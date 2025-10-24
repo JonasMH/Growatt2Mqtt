@@ -58,7 +58,8 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         {
             {_topicHelper.BatteryFirstModeTopic("+"), HandleBatteryFirstCommandAsync },
             {_topicHelper.BatteryFirstChargeSocTopic("+"), HandleBatteryFirstSoCCommandAsync },
-            {_topicHelper.ChargeFromAcTopic("+"), HandleChargeFromAcCommandAsync }
+            {_topicHelper.ChargeFromAcTopic("+"), HandleChargeFromAcCommandAsync },
+            {_topicHelper.ExportLimitTopic("+"), HandleChargeFromAcCommandAsync }
         };
     }
 
