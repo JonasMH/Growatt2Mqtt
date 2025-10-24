@@ -5,6 +5,7 @@ using NodaTime;
 using System.Text.Json;
 using HomeAssistantDiscoveryNet;
 using MQTTnet.Client;
+using System.Linq.Expressions;
 
 namespace GrowattShine2Mqtt;
 
@@ -22,7 +23,9 @@ public static class GrowattInverterRegisters
     /// </summary>
     public static readonly GrowattInverterRegister ExportLimitPowerRate = new(123, "ExportLimitPowerRate");
 
-    public static readonly GrowattInverterRegister BatteryFirstChargeStopSoC = new(1091, "BatteryFirstSoC");
+    public static readonly GrowattInverterRegister Priority = new(1044, "Priority");
+    public static readonly GrowattInverterRegister BatteryUpperTemperatureLimitForDischarge = new(1010, "BatteryUpperTemperatureLimitForDischarge");
+    public static readonly GrowattInverterRegister BatteryFirstChargeStopSoC = new(1091, "BatteryFirstChargeStopSoC");
     public static readonly GrowattInverterRegister BatteryFirstAcCharge = new(1092, "BatteryFirstAcCharge");
     public static readonly GrowattInverterRegister BatteryFirst1Start = new(1100, "BatteryFirst1Start");
     public static readonly GrowattInverterRegister BatteryFirst1Stop = new(1101, "BatteryFirst1Stop");
@@ -40,9 +43,9 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
     private readonly IMqttConnectionService _mqttConnection;
     private readonly GrowattTopicHelper _topicHelper;
     private readonly List<MqttDiscoveryConfig> _dicoveryConfigs = [];
-    private Timer? _registerReaderTimer;
     private readonly Dictionary<string, Func<MqttApplicationMessageReceivedEventArgs, GrowattSocketHandler, Task>> _topicHandlers;
     private readonly GrowattServerListener _serverListener;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public GrowattToMqttHandler(
         ILogger<GrowattToMqttHandler> logger,
@@ -73,7 +76,25 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 
         await _mqttConnection.SubscribeAsync(_topicHandlers.Select(x => new MqttTopicFilterBuilder().WithTopic(x.Key).Build()).ToArray());
 
-        _registerReaderTimer = new Timer(async (state) => await ReadRegistersAsync(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        var _ = Task.Run(async () =>
+        {
+            while (!_cancellationTokenSource.IsCancellationRequested)
+            {
+                try
+                {
+                    await ReadRegistersAsync(_cancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error reading registers");
+                }
+                await Task.Delay(TimeSpan.FromMinutes(1), _cancellationTokenSource.Token);
+            }
+        });
         _logger.LogInformation("Started {hostedService}", GetType().Name);
     }
 
@@ -205,15 +226,17 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         }
     }
 
-    public async Task ReadRegistersAsync()
+    public async Task ReadRegistersAsync(CancellationToken cancellationToken)
     {
         var interestingRegisters = new GrowattInverterRegister[] {
-            new(1044, ""),
+            GrowattInverterRegisters.Priority,
             GrowattInverterRegisters.BatteryFirstChargeStopSoC,
             GrowattInverterRegisters.BatteryFirstAcCharge,
             GrowattInverterRegisters.ExportLimitEnableDisable,
             GrowattInverterRegisters.ExportLimitPowerRate,
-            GrowattInverterRegisters.LoadFirstStopSocSet };
+            GrowattInverterRegisters.LoadFirstStopSocSet,
+            GrowattInverterRegisters.BatteryUpperTemperatureLimitForDischarge
+        };
         _logger.LogInformation("Reading registers");
 
         try
@@ -236,9 +259,9 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                     await dataLogger.Value.SendTelegramAsync(telegram);
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
-            await Task.Delay(TimeSpan.FromSeconds(10));
+            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
 
             foreach (var dataLogger in _serverListener.Sockets)
             {
@@ -501,7 +524,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping {hostedService}", GetType().Name);
-        _registerReaderTimer?.Dispose();
+        _cancellationTokenSource.Cancel();
         _logger.LogInformation("Stopped {hostedService}", GetType().Name);
         return Task.CompletedTask;
     }
