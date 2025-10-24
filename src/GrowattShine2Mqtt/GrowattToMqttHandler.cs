@@ -22,11 +22,12 @@ public static class GrowattInverterRegisters
     /// </summary>
     public static readonly GrowattInverterRegister ExportLimitPowerRate = new(123, "ExportLimitPowerRate");
 
-    public static readonly GrowattInverterRegister BatteryFirstSoC = new(1091, "BatteryFirstSoC");
+    public static readonly GrowattInverterRegister BatteryFirstChargeStopSoC = new(1091, "BatteryFirstSoC");
     public static readonly GrowattInverterRegister BatteryFirstAcCharge = new(1092, "BatteryFirstAcCharge");
     public static readonly GrowattInverterRegister BatteryFirst1Start = new(1100, "BatteryFirst1Start");
     public static readonly GrowattInverterRegister BatteryFirst1Stop = new(1101, "BatteryFirst1Stop");
     public static readonly GrowattInverterRegister BatteryFirst1Enabled = new(1102, "BatteryFirst1Enabled");
+    public static readonly GrowattInverterRegister LoadFirstStopSocSet = new(1102, "bLoadFirstStopSocSet");
 }
 
 public record GrowattInverterRegister(ushort Register, string Name)
@@ -165,7 +166,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
             DataloggerId = growattSocket.Info.DataloggerSerial!,
-            Register = GrowattInverterRegisters.BatteryFirstSoC.Register,
+            Register = GrowattInverterRegisters.BatteryFirstChargeStopSoC.Register,
             Value = targetSoc
         });
     }
@@ -206,7 +207,13 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 
     public async Task ReadRegistersAsync()
     {
-        var interestingRegisters = new GrowattInverterRegister[] { new(1044, ""), GrowattInverterRegisters.BatteryFirstSoC, GrowattInverterRegisters.BatteryFirstAcCharge, GrowattInverterRegisters.ExportLimitEnableDisable, GrowattInverterRegisters.ExportLimitPowerRate };
+        var interestingRegisters = new GrowattInverterRegister[] {
+            new(1044, ""),
+            GrowattInverterRegisters.BatteryFirstChargeStopSoC,
+            GrowattInverterRegisters.BatteryFirstAcCharge,
+            GrowattInverterRegisters.ExportLimitEnableDisable,
+            GrowattInverterRegisters.ExportLimitPowerRate,
+            GrowattInverterRegisters.LoadFirstStopSocSet };
         _logger.LogInformation("Reading registers");
 
         try
@@ -467,7 +474,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Device = device,
             CommandTopic = _topicHelper.BatteryFirstChargeSocTopic(data4Telegram.Datalogserial),
             StateTopic = _topicHelper.GetInverterRegistryStatus(data4Telegram.Datalogserial),
-            ValueTemplate = $"{{{{ value_json.['{GrowattInverterRegisters.BatteryFirstSoC}'] }}}}",
+            ValueTemplate = $"{{{{ value_json.['{GrowattInverterRegisters.BatteryFirstChargeStopSoC.Register}'] }}}}",
             Min = 0,
             Max = 100,
             Step = 1,
