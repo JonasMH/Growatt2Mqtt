@@ -1,46 +1,12 @@
-﻿using System.Net.Sockets;
-using GrowattShine2Mqtt.Telegrams;
+﻿using GrowattShine2Mqtt.Telegrams;
 using NodaTime;
 
 namespace GrowattShine2Mqtt;
 
-public interface IGrowattSocket
-{
-    int Available { get; }
-    int SocketId { get; }
-    bool Connected { get; }
-    Task SendAsync(ArraySegment<byte> buffer);
-    Task<int> ReceiveAsync(ArraySegment<byte> buffer);
-}
+public class GrowattSocketHandler {
+    private readonly object _queryLock = new();
+    private TaskCompletionSource<GrowattInverterQueryResponseTelegram>? _pendingInverterQuery;
 
-public class GrowattSocket(Socket socket, int socketId) : IGrowattSocket
-{
-    private readonly Socket _socket = socket;
-    private readonly int _socketId = socketId;
-
-    public int Available => _socket.Available;
-    public int SocketId => _socketId;
-    public bool Connected => _socket.Connected;
-
-    public async Task SendAsync(ArraySegment<byte> buffer)
-    {
-        await _socket.SendAsync(buffer, SocketFlags.None);
-    }
-
-    public async Task<int> ReceiveAsync(ArraySegment<byte> buffer)
-    {
-        return await _socket.ReceiveAsync(buffer, SocketFlags.None);
-    }
-}
-
-public class GrowattDataloggerInformation {
-    public string? DataloggerSerial { get; set; }
-    public Dictionary<ushort, byte[]> DataloggerRegisterValues { get; set; } = [];
-    public Dictionary<ushort, ushort> InverterRegisterValues { get; set; } = [];
-}
-
-public class GrowattSocketHandler
-{
     private readonly ILogger<GrowattSocketHandler> _logger;
     private readonly IGrowattToMqttHandler _growattToMqttHandler;
     private readonly IGrowattTelegramParser _telegramParser;
@@ -76,7 +42,7 @@ public class GrowattSocketHandler
         var telegram = _telegramParser.ParseMessage(buffer);
 
         _logger.LogInformation("Received {packageTypeRaw}({packetType}) packet of size {size} bytes v{protocolVersion}", header.MessageTypeRaw.ToString("X"), header.MessageType, buffer.Count, header.ProtocolVersion);
-        if(_logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("0x{packet}", Convert.ToHexStringLower(buffer));
         }
@@ -106,6 +72,14 @@ public class GrowattSocketHandler
             case GrowattInverterQueryResponseTelegram inverterQueryResponse:
                 _logger.LogInformation("Inverter register {register}=0x{dataHex} ({data})", inverterQueryResponse.Register, inverterQueryResponse.Data.ToString("X"), inverterQueryResponse.Data);
                 Info.InverterRegisterValues.AddOrUpdate(inverterQueryResponse.Register, inverterQueryResponse.Data);
+                // Complete pending query if any
+                TaskCompletionSource<GrowattInverterQueryResponseTelegram>? tcs = null;
+                lock (_queryLock)
+                {
+                    tcs = _pendingInverterQuery;
+                    _pendingInverterQuery = null;
+                }
+                tcs?.TrySetResult(inverterQueryResponse);
                 break;
             case GrowattSPHData3Telegram data3Telegram:
                 _logger.LogInformation("Received data3 telegram from {serial}, ACKing...", data3Telegram.Datalogserial);
@@ -123,6 +97,40 @@ public class GrowattSocketHandler
                 await SendTelegramAsync(new GrowattSPHData4TelegramAck(telegram.Header));
                 await _growattToMqttHandler.HandleDataTelegramAsync(data4Telegram);
                 break;
+        }
+    }
+
+
+    /// <summary>
+    /// Sends a GrowattInverterQueryRequestTelegram and waits for the corresponding GrowattInverterQueryResponseTelegram.
+    /// </summary>
+    /// <param name="request">The request telegram to send.</param>
+    /// <param name="token">CancellationToken for timeout/cancel.</param>
+    /// <returns>The awaited GrowattInverterQueryResponseTelegram.</returns>
+    public async Task<GrowattInverterQueryResponseTelegram> QueryInverterRegister(GrowattInverterQueryRequestTelegram request, CancellationToken token)
+    {
+        TaskCompletionSource<GrowattInverterQueryResponseTelegram> tcs;
+        lock (_queryLock)
+        {
+            if (_pendingInverterQuery != null)
+                throw new InvalidOperationException("Another inverter query is already pending.");
+            _pendingInverterQuery = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            tcs = _pendingInverterQuery;
+        }
+        try
+        {
+            await SendTelegramAsync(request);
+            using (token.Register(() => tcs.TrySetCanceled(token), useSynchronizationContext: false))
+            {
+                return await tcs.Task.ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            lock (_queryLock)
+            {
+                _pendingInverterQuery = null;
+            }
         }
     }
 

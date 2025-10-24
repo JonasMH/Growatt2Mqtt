@@ -4,9 +4,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GrowattShine2Mqtt.Telegrams;
 
-public class GrowattInverterQueryTelegram : IGrowattTelegram, ISerializeableGrowattTelegram
+public class GrowattInverterQueryRequestTelegram : IGrowattTelegram, ISerializeableGrowattTelegram
 {
-    public GrowattInverterQueryTelegram()
+    public GrowattInverterQueryRequestTelegram()
     {
         Header = new GrowattTelegramHeader
         {

@@ -128,7 +128,7 @@ public class GrowattTestServiceImpl(ILogger<GrowattTestServiceImpl> logger, Grow
             throw new RpcException(new Status(StatusCode.NotFound, $"Datalogger {request.Datalogger} wasn't found"));
         }
 
-        var telegram = new GrowattInverterQueryTelegram()
+        var telegram = new GrowattInverterQueryRequestTelegram()
         {
             DataloggerId = request.Datalogger,
             StartAddress = (ushort)request.StartRegister,

@@ -92,7 +92,6 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                 {
                     _logger.LogError(ex, "Error reading registers");
                 }
-                await Task.Delay(TimeSpan.FromMinutes(1), _cancellationTokenSource.Token);
             }
         });
         _logger.LogInformation("Started {hostedService}", GetType().Name);
@@ -250,18 +249,17 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                         continue;
                     }
 
-                    var telegram = new GrowattInverterQueryTelegram()
+                    var telegram = new GrowattInverterQueryRequestTelegram()
                     {
                         DataloggerId = dataLogger.Value.Info.DataloggerSerial,
                         StartAddress = item.Register,
                         EndAddress = item.Register
                     };
-                    await dataLogger.Value.SendTelegramAsync(telegram);
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(TimeSpan.FromSeconds(20));
+                    await dataLogger.Value.QueryInverterRegister(telegram, cts.Token);
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
-            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
 
             foreach (var dataLogger in _serverListener.Sockets)
             {
