@@ -4,7 +4,7 @@ public class GrowattSPHPingTelegram(GrowattTelegramHeader header) : IGrowattTele
 {
     public GrowattTelegramHeader Header { get; set; } = header;
 
-    public string DataLoggerId { get; set; }
+    public string DataLoggerId { get; set; } = "";
 
     public static GrowattSPHPingTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {

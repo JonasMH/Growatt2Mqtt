@@ -15,7 +15,7 @@ public class GrowattDataloggerQueryTelegram : IGrowattTelegram, ISerializeableGr
     }
 
     public GrowattTelegramHeader Header { get; set; }
-    public string LoggerId { get; set; }
+    public string LoggerId { get; set; } = "";
     public ushort StartAddress { get; set; }
     public ushort EndAddress { get; set; }
 
@@ -37,10 +37,10 @@ public class GrowattDataloggerQueryResponseTelegram(GrowattTelegramHeader header
 {
     public GrowattTelegramHeader Header { get; set; } = header;
 
-    public string Datalogserial { get; set; }
+    public string Datalogserial { get; set; } = "";
     public ushort Register { get; set; }
     public short DataLength { get; set; }
-    public byte[] Data { get; set; }
+    public byte[] Data { get; set; } = [];
 
     public static GrowattDataloggerQueryResponseTelegram Parse(ArraySegment<byte> bytes, GrowattTelegramHeader header)
     {

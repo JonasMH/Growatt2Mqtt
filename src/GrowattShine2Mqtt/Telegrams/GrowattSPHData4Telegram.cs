@@ -6,8 +6,8 @@ public class GrowattSPHData4Telegram(GrowattTelegramHeader header) : IGrowattTel
 {
     public GrowattTelegramHeader Header { get; set; } = header;
 
-    public string Datalogserial { get; set; }
-    public string Pvserial { get; set; }
+    public string Datalogserial { get; set; } = "";
+    public string Pvserial { get; set; } = "";
     public LocalDateTime? Date { get; set; }
     public int Recortype1 { get; set; }
     public int Recortype2 { get; set; }

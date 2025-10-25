@@ -17,9 +17,9 @@ public class GrowattDataloggerCommandTelegram : IGrowattTelegram, ISerializeable
 
     public GrowattTelegramHeader Header { get; set; }
 
-    public string LoggerId { get; set; }
+    public string LoggerId { get; set; } = "";
     public ushort Register { get; set; }
-    public byte[] Value { get; set; }
+    public byte[] Value { get; set; } = [];
 
 
     public byte[] ToBytes()

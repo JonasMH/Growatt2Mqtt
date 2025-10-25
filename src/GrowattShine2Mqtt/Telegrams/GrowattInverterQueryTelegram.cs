@@ -15,7 +15,7 @@ public class GrowattInverterQueryRequestTelegram : IGrowattTelegram, ISerializea
     }
 
     public GrowattTelegramHeader Header { get; set; }
-    public string DataloggerId { get; set; }
+    public string DataloggerId { get; set; } = "";
     public ushort StartAddress { get; set; }
     public ushort EndAddress { get; set; }
 
@@ -42,7 +42,7 @@ public class GrowattInverterQueryResponseTelegram(GrowattTelegramHeader header) 
 {
     public GrowattTelegramHeader Header { get; set; } = header;
 
-    public string DataloggerId { get; set; }
+    public string DataloggerId { get; set; } = "";
     public ushort Register { get; set; }
     public ushort Data { get; set; }
 
