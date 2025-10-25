@@ -47,6 +47,8 @@ services.AddSingleton<NodaTime.IDateTimeZoneProvider>(x => DateTimeZoneProviders
 services.AddSingleton<GrowattToMqttHandler>();
 services.AddSingleton<IGrowattToMqttHandler>(x => x.GetRequiredService<GrowattToMqttHandler>());
 services.AddHostedService(x => x.GetRequiredService<GrowattToMqttHandler>());
+services.AddOptions<GrowattToMqttOptions>()
+    .BindConfiguration(GrowattToMqttOptions.Section);
 
 var app = builder.Build();
 

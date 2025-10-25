@@ -5,17 +5,13 @@ using NodaTime;
 using System.Text.Json;
 using HomeAssistantDiscoveryNet;
 using MQTTnet.Client;
-using System.Linq.Expressions;
+using Microsoft.Extensions.Options;
 
 namespace GrowattShine2Mqtt;
 
 public interface IGrowattToMqttHandler
 {
     Task HandleDataTelegramAsync(GrowattSPHData4Telegram data4Telegram);
-}
-
-public record GrowattInverterRegister(ushort Register, string Name)
-{
 }
 
 public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
@@ -26,27 +22,36 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
     private readonly List<MqttDiscoveryConfig> _dicoveryConfigs = [];
     private readonly Dictionary<string, Func<MqttApplicationMessageReceivedEventArgs, GrowattSocketHandler, Task>> _topicHandlers;
     private readonly GrowattServerListener _serverListener;
+    private readonly IOptions<GrowattToMqttOptions> _options;
+
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public GrowattToMqttHandler(
         ILogger<GrowattToMqttHandler> logger,
         IMqttConnectionService mqttConnection,
         GrowattTopicHelper topicHelper,
-        GrowattServerListener serverListener)
+        GrowattServerListener serverListener,
+        IOptions<GrowattToMqttOptions> options)
     {
         _serverListener = serverListener;
+        this._options = options;
+
         _logger = logger;
         _mqttConnection = mqttConnection;
         _topicHelper = topicHelper;
 
         _topicHandlers = new()
         {
-            {_topicHelper.BatteryFirstModeTopic("+"), HandleBatteryFirstCommandAsync },
-            {_topicHelper.BatteryFirstChargeSocTopic("+"), HandleBatteryFirstSoCCommandAsync },
-            {_topicHelper.ChargeFromAcTopic("+"), HandleChargeFromAcCommandAsync },
-            {_topicHelper.ExportLimitTopic("+"), HandleChargeFromAcCommandAsync }
+            {_topicHelper.BatteryFirstMode("+"), HandleBatteryFirstCommandAsync },
+            {_topicHelper.BatteryFirstChargeSoc("+"), HandleBatteryFirstChargeSoCCommandAsync },
+            {_topicHelper.BatteryFirstDischargeSoc("+"), HandleBatteryFirstDischargeSoCCommandAsync },
+            {_topicHelper.LoadFirstDischargeSoc("+"), HandleLoadFirstDischargeSoCCommandAsync },
+            {_topicHelper.ChargeFromAc("+"), HandleChargeFromAcCommandAsync },
+            {_topicHelper.ExportLimit("+"), HandleChargeFromAcCommandAsync }
         };
     }
+
+
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -152,19 +157,61 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
         });
     }
 
-    private async Task HandleBatteryFirstSoCCommandAsync(MqttApplicationMessageReceivedEventArgs args, GrowattSocketHandler growattSocket)
+    private async Task HandleLoadFirstDischargeSoCCommandAsync(MqttApplicationMessageReceivedEventArgs args, GrowattSocketHandler growattSocket)
     {
         var topic = args.ApplicationMessage.Topic;
         var content = args.ApplicationMessage.ConvertPayloadToString();
 
-        if (!ushort.TryParse(content, out var targetSoc) || targetSoc < 0 || targetSoc > 100)
+        if (!ushort.TryParse(content, out var targetSoc) || targetSoc < 10 || targetSoc > 100)
         {
             _logger.LogWarning("Received invalid SoC. {topic}: {content}. Must be a number from 0-100", topic, content);
             return;
         }
 
 
-        _logger.LogInformation("Setting battery first soc to {value} on {datalogger}", targetSoc, growattSocket.Info.DataloggerSerial);
+        _logger.LogInformation("Setting load first min soc to {value} on {datalogger}", targetSoc, growattSocket.Info.DataloggerSerial);
+        await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
+        {
+            DataloggerId = growattSocket.Info.DataloggerSerial!,
+            Register = GrowattInverterRegisters.LoadFirstDischargeStopSoC.Register,
+            Value = targetSoc
+        });
+    }
+
+    private async Task HandleBatteryFirstDischargeSoCCommandAsync(MqttApplicationMessageReceivedEventArgs args, GrowattSocketHandler growattSocket)
+    {
+        var topic = args.ApplicationMessage.Topic;
+        var content = args.ApplicationMessage.ConvertPayloadToString();
+
+        if (!ushort.TryParse(content, out var targetSoc) || targetSoc < 10 || targetSoc > 100)
+        {
+            _logger.LogWarning("Received invalid SoC. {topic}: {content}. Must be a number from 0-100", topic, content);
+            return;
+        }
+
+
+        _logger.LogInformation("Setting battery first min soc to {value} on {datalogger}", targetSoc, growattSocket.Info.DataloggerSerial);
+        await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
+        {
+            DataloggerId = growattSocket.Info.DataloggerSerial!,
+            Register = GrowattInverterRegisters.BatteryFirstDischargeStopSoC.Register,
+            Value = targetSoc
+        });
+    }
+
+    private async Task HandleBatteryFirstChargeSoCCommandAsync(MqttApplicationMessageReceivedEventArgs args, GrowattSocketHandler growattSocket)
+    {
+        var topic = args.ApplicationMessage.Topic;
+        var content = args.ApplicationMessage.ConvertPayloadToString();
+
+        if (!ushort.TryParse(content, out var targetSoc) || targetSoc < 10 || targetSoc > 100)
+        {
+            _logger.LogWarning("Received invalid SoC. {topic}: {content}. Must be a number from 0-100", topic, content);
+            return;
+        }
+
+
+        _logger.LogInformation("Setting battery first max soc to {value} on {datalogger}", targetSoc, growattSocket.Info.DataloggerSerial);
         await growattSocket.SendTelegramAsync(new GrowattInverterCommandTelegram()
         {
             DataloggerId = growattSocket.Info.DataloggerSerial!,
@@ -209,20 +256,11 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
 
     public async Task ReadRegistersAsync(CancellationToken cancellationToken)
     {
-        var interestingRegisters = new GrowattInverterRegister[] {
-            GrowattInverterRegisters.Priority,
-            GrowattInverterRegisters.BatteryFirstChargeStopSoC,
-            GrowattInverterRegisters.BatteryFirstAcCharge,
-            GrowattInverterRegisters.ExportLimitEnableDisable,
-            GrowattInverterRegisters.ExportLimitPowerRate,
-            GrowattInverterRegisters.BatteryUpperTemperatureLimitForDischarge,
-            GrowattInverterRegisters.LoadFirstChargeStopSoC
-        };
         _logger.LogInformation("Reading registers");
 
         try
         {
-            foreach (var item in interestingRegisters)
+            foreach (var item in _options.Value.InverterRegistersToRead)
             {
                 foreach (var dataLogger in _serverListener.Sockets)
                 {
@@ -234,8 +272,8 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                     var telegram = new GrowattInverterQueryRequestTelegram()
                     {
                         DataloggerId = dataLogger.Value.Info.DataloggerSerial,
-                        StartAddress = item.Register,
-                        EndAddress = item.Register
+                        StartAddress = item,
+                        EndAddress = item
                     };
                     using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     cts.CancelAfter(TimeSpan.FromSeconds(20));
@@ -255,7 +293,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
                     Registers = dataLogger.Value.Info.InverterRegisterValues.ToDictionary(x => x.Key, x => new GrowattRegisterStatus
                     {
                         RawValue = x.Value,
-                        Name = interestingRegisters.FirstOrDefault(r => r.Register == x.Key)?.Name ?? ""
+                        Name = GrowattInverterRegisters.AllRegisters.GetValueOrDefault(x.Key)?.Name ?? ""
                     })
                 }, GrowattMqttJsonSerializerContext.Default.GrowattRegistersStatus);
 
@@ -441,7 +479,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Name = "Enable Battery First",
             UniqueId = data4Telegram.Datalogserial.ToLower() + "_enablebatteryfirst",
             Device = device,
-            CommandTopic = _topicHelper.BatteryFirstModeTopic(data4Telegram.Datalogserial),
+            CommandTopic = _topicHelper.BatteryFirstMode(data4Telegram.Datalogserial),
             CommandTemplate = "true"
         });
         _dicoveryConfigs.Add(new MqttButtonDiscoveryConfig()
@@ -449,7 +487,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Name = "Disable Battery First",
             UniqueId = data4Telegram.Datalogserial.ToLower() + "_disablebatteryfirst",
             Device = device,
-            CommandTopic = _topicHelper.BatteryFirstModeTopic(data4Telegram.Datalogserial),
+            CommandTopic = _topicHelper.BatteryFirstMode(data4Telegram.Datalogserial),
             CommandTemplate = "false"
         });
 
@@ -458,7 +496,7 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Name = "Battery First Enable Charge From AC",
             UniqueId = data4Telegram.Datalogserial.ToLower() + "_enablechargefromac",
             Device = device,
-            CommandTopic = _topicHelper.ChargeFromAcTopic(data4Telegram.Datalogserial),
+            CommandTopic = _topicHelper.ChargeFromAc(data4Telegram.Datalogserial),
             CommandTemplate = "true"
         });
         _dicoveryConfigs.Add(new MqttButtonDiscoveryConfig()
@@ -466,19 +504,47 @@ public class GrowattToMqttHandler : IHostedService, IGrowattToMqttHandler
             Name = "Battery First Disable Charge From AC",
             UniqueId = data4Telegram.Datalogserial.ToLower() + "_disablechargefromac",
             Device = device,
-            CommandTopic = _topicHelper.ChargeFromAcTopic(data4Telegram.Datalogserial),
+            CommandTopic = _topicHelper.ChargeFromAc(data4Telegram.Datalogserial),
             CommandTemplate = "false"
         });
 
         _dicoveryConfigs.Add(new MqttNumberDiscoveryConfig()
         {
-            Name = "Battery First Stop Charge SoC",
+            Name = "Battery First Charge Stop SoC",
             UniqueId = data4Telegram.Datalogserial.ToLower() + "_batteryfirstsoc",
             Device = device,
-            CommandTopic = _topicHelper.BatteryFirstChargeSocTopic(data4Telegram.Datalogserial),
+            CommandTopic = _topicHelper.BatteryFirstChargeSoc(data4Telegram.Datalogserial),
             StateTopic = _topicHelper.GetInverterRegistryStatus(data4Telegram.Datalogserial),
             ValueTemplate = $"{{{{ value_json.['{GrowattInverterRegisters.BatteryFirstChargeStopSoC.Register}'] }}}}",
-            Min = 0,
+            Min = 10,
+            Max = 100,
+            Step = 1,
+            UnitOfMeasurement = HomeAssistantUnits.PERCENTAGE.Value
+        });
+
+        _dicoveryConfigs.Add(new MqttNumberDiscoveryConfig()
+        {
+            Name = "Battery First Discharge Stop SoC",
+            UniqueId = data4Telegram.Datalogserial.ToLower() + "_batteryfirstsocmin",
+            Device = device,
+            CommandTopic = _topicHelper.BatteryFirstDischargeSoc(data4Telegram.Datalogserial),
+            StateTopic = _topicHelper.GetInverterRegistryStatus(data4Telegram.Datalogserial),
+            ValueTemplate = $"{{{{ value_json.['{GrowattInverterRegisters.BatteryFirstDischargeStopSoC.Register}'] }}}}",
+            Min = 10,
+            Max = 100,
+            Step = 1,
+            UnitOfMeasurement = HomeAssistantUnits.PERCENTAGE.Value
+        });
+
+        _dicoveryConfigs.Add(new MqttNumberDiscoveryConfig()
+        {
+            Name = "Load First Discharge Stop SoC",
+            UniqueId = data4Telegram.Datalogserial.ToLower() + "_loadfirstsocmin",
+            Device = device,
+            CommandTopic = _topicHelper.LoadFirstDischargeSoc(data4Telegram.Datalogserial),
+            StateTopic = _topicHelper.GetInverterRegistryStatus(data4Telegram.Datalogserial),
+            ValueTemplate = $"{{{{ value_json.['{GrowattInverterRegisters.LoadFirstDischargeStopSoC.Register}'] }}}}",
+            Min = 10,
             Max = 100,
             Step = 1,
             UnitOfMeasurement = HomeAssistantUnits.PERCENTAGE.Value

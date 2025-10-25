@@ -11,11 +11,16 @@ public class GrowattTopicHelper(IMqttConnectionService mqttConnection)
     public string GetConnectedTopic() => $"{_mqttConnection.MqttOptions.NodeId}/connected";
     public string GetDataPublishTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/data";
     public string GetInverterRegistryStatus(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/status/{dataLogger.ToLower()}/inverter-registers";
-    public string BatteryFirstModeTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first";
-    public string BatteryFirstChargeSocTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first-soc";
-    public string ChargeFromAcTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/charge-from-ac";
 
-    public string ExportLimitTopic(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/export-limit";
+    public string LoadFirstDischargeSoc(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/load-first-soc-miin";
+
+    public string BatteryFirstMode(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first";
+    public string BatteryFirstChargeSoc(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first-soc-max";
+    public string BatteryFirstDischargeSoc(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/battery-first-soc-min";
+
+    public string ChargeFromAc(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/charge-from-ac";
+
+    public string ExportLimit(string dataLogger) => $"{_mqttConnection.MqttOptions.NodeId}/write/{dataLogger.ToLower()}/export-limit";
 
 
     public bool TryGetDatalogger(string topic, out string dataLogger)
