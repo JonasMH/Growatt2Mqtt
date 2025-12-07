@@ -1,8 +1,4 @@
-﻿using System.Text;
-using Google.Protobuf.WellKnownTypes;
-using Microsoft.Win32;
-
-namespace GrowattShine2Mqtt.Telegrams;
+﻿namespace GrowattShine2Mqtt.Telegrams;
 
 public class GrowattDataloggerQueryTelegram : IGrowattTelegram, ISerializeableGrowattTelegram
 {

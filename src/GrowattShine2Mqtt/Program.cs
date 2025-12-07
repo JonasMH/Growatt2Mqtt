@@ -1,11 +1,9 @@
-﻿using System.Net.Sockets;
-using GrowattShine2Mqtt;
-using GrowattShine2Mqtt.Grpc;
+﻿using GrowattShine2Mqtt;
 using NodaTime;
 using OpenTelemetry.Metrics;
 using ToMqttNet;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateSlimBuilder(args);
 
 builder.Logging.AddSimpleConsole(options =>
 {
@@ -16,8 +14,6 @@ builder.Logging.AddSimpleConsole(options =>
 
 var services = builder.Services;
 
-services.AddGrpc();
-services.AddGrpcReflection();
 services.AddHealthChecks();
 services.AddSingleton<GrowattTopicHelper>();
 services.AddSingleton<IGrowattTelegramParser, GrowattTelegramParser>();
@@ -54,8 +50,6 @@ var app = builder.Build();
 
 app.UseRouting();
 
-app.MapGrpcReflectionService();
-app.MapGrpcService<GrowattTestServiceImpl>();
 app.MapHealthChecks("/health");
 app.MapPrometheusScrapingEndpoint("/metrics");
 

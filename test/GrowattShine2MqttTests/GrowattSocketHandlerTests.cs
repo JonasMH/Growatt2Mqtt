@@ -28,13 +28,13 @@ public class LoggerMock<T> : ILogger<T>
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-        
+
     }
 }
 
 public class GrowattToMqttHandlerMock : IGrowattToMqttHandler
 {
-    public Task HandleDataTelegramAsync(GrowattSPHData4Telegram data4Telegram){ return Task.CompletedTask; }
+    public Task HandleDataTelegramAsync(GrowattSPHData4Telegram data4Telegram) { return Task.CompletedTask; }
 }
 
 public class GrowattSocketHandlerTests
@@ -66,7 +66,7 @@ public class GrowattSocketHandlerTests
 
         var lastSentBuffer = _growattSocketMock.Sends.Last();
 
-        Assert.Equal("00050006002001160d222c402040467734257761747447726f7761747447726f776174744772810f".ParseHex(), lastSentBuffer);
+        Assert.Equal("00050006002001160d222c402040467734257761747447726f7761747447726f776174744772810f".ParseHex().AsSpan(), lastSentBuffer);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class GrowattSocketHandlerTests
         Assert.True(_sut.Info.InverterRegisterValues.ContainsKey(0x0001), "Register didn't exist");
         Assert.Equal(0x0000, _sut.Info.InverterRegisterValues[0x0001]);
     }
-    
+
 
     [Fact]
     public async Task HandleMessageAsync_ShouldHandleQueryDataLoggerResponse()
