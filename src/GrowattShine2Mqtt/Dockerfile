@@ -7,6 +7,7 @@ RUN dotnet publish "GrowattShine2Mqtt/GrowattShine2Mqtt.csproj" -r linux-musl-x6
 RUN rm -f /out/*.dbg /out/*.Development.json && chmod +x /out/GrowattShine2Mqtt
 
 FROM alpine AS final
+RUN apk add --no-cache tzdata
 WORKDIR /app
 COPY --from=build /out/* .
 ENTRYPOINT ["/app/GrowattShine2Mqtt"]
