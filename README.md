@@ -4,7 +4,7 @@ This program accepts connections from a Growatt Inverter (Only tested with a sin
 
 ## Features
 
-## No internet connection required
+### No internet connection required
 
 This services does not forward the date to Growatt servers, it takes over all communication with the inverter and all data is kept locally.
 
