@@ -30,8 +30,8 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_REGISTRY_USER }}
           password: ${{ secrets.DOCKER_HUB_REGISTRY_PASSWORD }}
       - name: Build image
-        run: docker build --pull -f ./src/GrowattShine2Mqtt/Dockerfile -t jonasmh/growattshine2mqtt:${{ github.ref_name }} -t jonasmh/growattshine2mqtt:latest .
+        run: docker build --pull -f ./src/GrowattShine2Mqtt/Dockerfile -t jonasmh/growatt2mqtt:${{ github.ref_name }} -t jonasmh/growatt2mqtt:latest .
       - name: Push image
         run: |-
-          docker push jonasmh/growattshine2mqtt:${{ github.ref_name }};
-          docker push jonasmh/growattshine2mqtt:latest;
+          docker push jonasmh/growatt2mqtt:${{ github.ref_name }};
+          docker push jonasmh/growatt2mqtt:latest;

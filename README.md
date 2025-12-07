@@ -102,6 +102,8 @@ It has a health endpoint at `/health`
 
 The application is distributed using a docker image available at [jonasmh/growatt2mqtt](https://hub.docker.com/r/jonasmh/growatt2mqtt)
 
+It is based on a `alpine` base image with no additional packages other than the Growatt2Mqtt services thanks to C#'s AOT compilation feature. This also means the entire image only takes up ~12 MBytes compressed
+
 ### Docker Compose
 
 Example docker-compose:
