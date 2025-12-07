@@ -33,7 +33,7 @@ services.AddOpenTelemetry()
     });
 
 
-services.AddOptions<GrowattServerOptions>().BindConfiguration(nameof(GrowattServerOptions));
+services.AddOptions<GrowattServerOptions>().BindConfiguration(GrowattServerOptions.SectionName);
 
 services.AddSingleton<GrowattMetrics>();
 services.AddSingleton<IGrowattTelegramEncrypter, GrowattTelegramEncrypter>();
